@@ -22,9 +22,11 @@ COPY requirements.txt .
 # Atualiza pip e ferramentas essenciais primeiro
 RUN pip install --upgrade pip setuptools wheel
 
-# Instala em duas levas para evitar estourar a RAM (OOM) no dependency resolver
-RUN head -n 10 requirements.txt > req_base.txt && pip install -r req_base.txt
-RUN tail -n +11 requirements.txt > req_heavy.txt && pip install -r req_heavy.txt
+# Técnica Extrema Antibloqueio (OOM Killer): Instala 1 pacote por vez e esvazia a RAM imediatamente
+RUN cat requirements.txt | xargs -n 1 pip install --no-cache-dir || true
+
+# Como o xargs pode engolir alguns erros ou pular deps aninhadas, damos um passe final consolidado
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia todo o código fonte para dentro da imagem
 COPY . .
