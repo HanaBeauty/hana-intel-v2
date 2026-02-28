@@ -14,21 +14,23 @@ router = APIRouter(
 async def n8n_webhook_receiver(payload: Dict[str, Any] = Body(...)):
     """
     Endpoint principal para receber disparos passivos (Webhooks) do N8N.
-    Exemplo: Novo Lead no Facebook, Abandono de Carrinho capturado pelo N8N, etc.
     """
     try:
         event_type = payload.get('event_type', 'Desconhecido')
         logger.info(f"📥 Recebido Webhook do N8N. Evento: {event_type}")
         
-        # Repassando o fardo pesado (CrewAI / LLM) para a fila assíncrona do Celery
         task = process_n8n_webhook_task.delay(payload)
+        logger.info(f"Task type: {type(task)}")
+        
+        # Safe way to get task ID or string representation
+        task_id = getattr(task, 'id', str(task))
         
         return {
             "status": "received", 
             "message": "Webhook recebido e enfileirado para processamento assíncrono.",
-            "task_id": task.id
+            "task_id": task_id
         }
         
     except Exception as e:
         logger.error(f"❌ Falha ao processar payload do N8N: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Erro interno: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Erro interno HTTP Post: {str(e)}")
