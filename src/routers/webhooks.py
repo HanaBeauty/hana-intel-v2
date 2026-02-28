@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Request, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Body, HTTPException
+from typing import Dict, Any
 import logging
 from src.tasks import process_n8n_webhook_task
 
@@ -10,16 +11,14 @@ router = APIRouter(
 )
 
 @router.post("/n8n")
-async def n8n_webhook_receiver(request: Request):
+async def n8n_webhook_receiver(payload: Dict[str, Any] = Body(...)):
     """
     Endpoint principal para receber disparos passivos (Webhooks) do N8N.
     Exemplo: Novo Lead no Facebook, Abandono de Carrinho capturado pelo N8N, etc.
-    O processamento cognitivo será empurrado para o Celery (Background) para
-    garantir que a API responda 200 OK instaantaneamente.
     """
     try:
-        payload = await request.json()
-        logger.info(f"📥 Recebido Webhook do N8N. Evento: {payload.get('event_type', 'Desconhecido')}")
+        event_type = payload.get('event_type', 'Desconhecido')
+        logger.info(f"📥 Recebido Webhook do N8N. Evento: {event_type}")
         
         # Repassando o fardo pesado (CrewAI / LLM) para a fila assíncrona do Celery
         task = process_n8n_webhook_task.delay(payload)
@@ -32,4 +31,4 @@ async def n8n_webhook_receiver(request: Request):
         
     except Exception as e:
         logger.error(f"❌ Falha ao processar payload do N8N: {str(e)}")
-        raise HTTPException(status_code=400, detail="Formato de Payload Inválido")
+        raise HTTPException(status_code=400, detail=f"Erro interno: {str(e)}")
