@@ -11,8 +11,20 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y gcc libpq-dev && rm -rf /var/lib/apt/lists/*
 
 # Copia os requisitos e instala
+# Configurações do PIP para economizar Memória RAM no Build (OOM Killer Defense)
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_DEFAULT_TIMEOUT=120
+
+# Copia os requisitos
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Atualiza pip e ferramentas essenciais primeiro
+RUN pip install --upgrade pip setuptools wheel
+
+# Instala em duas levas para evitar estourar a RAM (OOM) no dependency resolver
+RUN head -n 10 requirements.txt > req_base.txt && pip install -r req_base.txt
+RUN tail -n +11 requirements.txt > req_heavy.txt && pip install -r req_heavy.txt
 
 # Copia todo o código fonte para dentro da imagem
 COPY . .
