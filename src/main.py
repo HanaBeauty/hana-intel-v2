@@ -2,6 +2,8 @@ from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Dict, Any
 import logging
+from src.tasks import process_strategic_intent
+from src.routers import webhooks
 
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO)
@@ -21,6 +23,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Registrando módulos independentes (Routers)
+app.include_router(webhooks.router)
 
 @app.get("/", tags=["Health"])
 async def root() -> Dict[str, str]:
