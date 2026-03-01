@@ -20,31 +20,51 @@ def process_strategic_intent(self, user_intent: str):
     logger.info(f"✅ [Celery Worker] Tarefa concluída.")
     return {"status": "success", "result": resultado_crew}
 
-@celery_app.task(bind=True, name="src.tasks.process_n8n_webhook_task")
-def process_n8n_webhook_task(self, payload: dict):
+@celery_app.task(bind=True, name="src.tasks.process_evolution_webhook_task")
+def process_evolution_webhook_task(self, payload: dict):
     """
-    Tarefa de background que processa os webhooks recebidos do N8N.
-    Aqui os agentes do CrewAI podem ser instanciados de forma segura
-    sem segurar a requisição HTTP original.
+    Tarefa de background que processa os webhooks recebidos da Evolution API (WhatsApp).
+    Aqui a Hana AI Core (Agente) é acionada de forma autônoma e segura.
     """
-    event_type = payload.get('event_type')
-    logger.info(f"⚙️ [Celery Worker] Processando webhook N8N assincronamente: {event_type}")
+    event_type = payload.get('event')
+    logger.info(f"⚙️ [Celery Worker] Processando webhook Evolution API: {event_type}")
     
-    if event_type == "SOCIAL_COMMENT":
-        logger.info("📱 Disparando Agente Community Manager para responder comentário...")
-        social_context = payload.get("data", {})
-        resposta = crew_social_media.process_social_comment(social_context)
-        logger.info(f"✅ [Celery Worker] Resposta Social Gerada: {resposta}")
-        # Futuro: Aqui faríamos um HTTP POST de volta pro N8N publicar a 'resposta'
-        return {"status": "success", "event": event_type, "agent_response": resposta}
+    # Evento quando uma nova mensagem entra no WhatsApp conectado
+    if event_type == "messages.upsert":
+        data = payload.get("data", {})
+        message_info = data.get("message", {})
+        key = data.get("key", {})
         
-    elif event_type == "ABANDONED_CART":
-        logger.info("🛒 Disparando Agente Copywriter para recuperação de carrinho...")
-        # Lógica de carrinho
-        import time
-        time.sleep(2)
-        return {"status": "success", "event": event_type}
+        # Ignora mensagens enviadas pela própria Hana (fromMe = True) para evitar looping
+        if key.get("fromMe") is True:
+            logger.info("⏸️ Ignorando mensagem enviada por nós mesmos.")
+            return {"status": "ignored", "reason": "fromMe"}
+            
+        # Pega o número do cliente e o texto da mensagem
+        remote_jid = key.get("remoteJid", "Desconhecido")
+        texto_msg = message_info.get("conversation", "")
+        
+        # Casos onde o texto vem dentro de message.extendedTextMessage.text
+        if not texto_msg and isinstance(message_info.get("extendedTextMessage"), dict):
+            texto_msg = message_info["extendedTextMessage"].get("text", "")
+            
+        logger.info(f"📱 Nova mensagem WhatsApp de {remote_jid}: {texto_msg}")
+        
+        # Construindo o contexto para enviar ao Agente do CrewAI
+        wa_context = {
+            "plataforma": "WhatsApp",
+            "usuario": remote_jid.replace("@s.whatsapp.net", ""),
+            "comentario": texto_msg
+        }
+        
+        logger.info("🧠 Disparando Agente de Atendimento/Vendas para analisar a mensagem...")
+        resposta = crew_social_media.process_social_comment(wa_context)
+        
+        logger.info(f"✅ [Celery Worker] Resposta do Agente Gerada:\n{resposta}")
+        # Next Step: Disparar um POST de volta para a Evolution (via SendWhatsAppTool) com 'resposta'
+        
+        return {"status": "success", "event": event_type, "agent_response": resposta, "remote_jid": remote_jid}
         
     else:
-        logger.warning(f"⚠️ Evento N8N desconhecido: {event_type}")
+        logger.warning(f"⚠️ Evento Evolution ignorado ou não tratado: {event_type}")
         return {"status": "ignored", "event": event_type}
