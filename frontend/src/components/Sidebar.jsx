@@ -2,43 +2,44 @@ import { NavLink } from 'react-router-dom';
 import { Activity, MailCheck, Settings, Home } from 'lucide-react';
 
 export default function Sidebar() {
-    const routes = [
-        { path: '/radar', label: 'Radar 360', icon: <Activity size={20} /> },
-        { path: '/review-board', label: 'Aprovador (CRM)', icon: <MailCheck size={20} /> },
-        { path: '#', label: 'Strategy Room', icon: <Home size={20} /> },
-        { path: '#', label: 'Configurações', icon: <Settings size={20} /> }
-    ];
+  const routes = [
+    { path: '/control-tower', label: 'Torre de Controle', icon: <Activity size={20} /> },
+    { path: '/radar', label: 'Radar 360', icon: <Activity size={20} /> },
+    { path: '/review-board', label: 'Aprovador (CRM)', icon: <MailCheck size={20} /> },
+    { path: '#', label: 'Strategy Room', icon: <Home size={20} /> },
+    { path: '#', label: 'Configurações', icon: <Settings size={20} /> }
+  ];
 
-    return (
-        <aside className="sidebar">
-            <div className="sidebar-header">
-                <h2 className="brand-title">HANA INTEL <span className="version">2.0</span></h2>
-            </div>
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-header">
+        <h2 className="brand-title">HANA INTEL <span className="version">2.0</span></h2>
+      </div>
 
-            <nav className="sidebar-nav">
-                {routes.map((route, i) => (
-                    <NavLink
-                        key={i}
-                        to={route.path !== '#' ? route.path : '/#'}
-                        className={({ isActive }) => `nav-item ${isActive && route.path !== '#' ? 'active' : ''}`}
-                    >
-                        <span className="nav-icon">{route.icon}</span>
-                        <span className="nav-label">{route.label}</span>
-                    </NavLink>
-                ))}
-            </nav>
+      <nav className="sidebar-nav">
+        {routes.map((route, i) => (
+          <NavLink
+            key={i}
+            to={route.path !== '#' ? route.path : '/#'}
+            className={({ isActive }) => `nav-item ${isActive && route.path !== '#' ? 'active' : ''}`}
+          >
+            <span className="nav-icon">{route.icon}</span>
+            <span className="nav-label">{route.label}</span>
+          </NavLink>
+        ))}
+      </nav>
 
-            <div className="sidebar-footer">
-                <div className="user-profile">
-                    <div className="avatar">JT</div>
-                    <div className="user-info">
-                        <p className="user-name">Juliano Takimoto</p>
-                        <p className="user-role">CEO / Master Admin</p>
-                    </div>
-                </div>
-            </div>
+      <div className="sidebar-footer">
+        <div className="user-profile">
+          <div className="avatar">JT</div>
+          <div className="user-info">
+            <p className="user-name">Juliano Takimoto</p>
+            <p className="user-role">CEO / Master Admin</p>
+          </div>
+        </div>
+      </div>
 
-            <style>{`
+      <style>{`
         .sidebar {
           width: 260px;
           height: 100vh;
@@ -135,6 +136,6 @@ export default function Sidebar() {
           color: var(--color-text-secondary);
         }
       `}</style>
-        </aside>
-    );
+    </aside>
+  );
 }

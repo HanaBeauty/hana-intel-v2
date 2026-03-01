@@ -100,3 +100,47 @@ async def toggle_handoff(number: str, action: str):
         return {"message": f"IA Silenciada (Hand-off ativado) para {number}."}
     else:
         raise HTTPException(status_code=400, detail="Ação inválida")
+
+# --- Torre de Controle (Telemetria) ---
+@router.get("/telemetry")
+async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):
+    """Retorna dados consolidados para a Torre de Controle (DB, Redis, Métricas)"""
+    r = get_redis_client()
+    
+    # 1. Health Checks
+    redis_health = "online" if r.ping() else "offline"
+    try:
+        await db.execute(select(1))
+        db_health = "online"
+    except Exception:
+        db_health = "offline"
+        
+    # 2. Performance (Simplificado por agora, pode ler do DB de logs no futuro)
+    # Contabiliza quantos clientes ativos temos no Redis (Leads Mapeados)
+    active_leads_keys = r.keys("chat_history:*")
+    active_leads_count = len(active_leads_keys)
+    
+    # Historico (Pega do Redis ou mock para logs rápidos)
+    # A implementação ideal fará um LTRIM de uma chave 'system_logs' que o Celery vai popular
+    logs = [
+        {"time": "Agora", "origin": "system", "action": "TELEMETRY_SYNC", "dest": "Dashboard"}
+    ]
+
+    return {
+        "health": {
+            "redis": redis_health,
+            "db": db_health,
+            "whatsapp": "online" # Presumido online para v2 direct via Evolution webhook
+        },
+        "performance": {
+            "messages_today": active_leads_count * 2, # Simulando volume vs leads
+            "campaigns_active": 0,
+            "bounces": 0
+        },
+        "crm": {
+            "active_leads": active_leads_count,
+            "ltv": "Calculando..." # A integrar com Shopify no futuro
+        },
+        "logs": logs
+    }
+
