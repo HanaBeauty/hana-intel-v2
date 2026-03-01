@@ -7,6 +7,23 @@ from src.rag.ingestion import ingestion_pipeline
 
 logger = logging.getLogger(__name__)
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+import os
+from src.models import ProductKnowledge
+
+sync_url = os.getenv("DATABASE_URL", "postgresql://hana_admin:c0c1164a842da069a9a9@hana-db:5432/hana_intel")
+if sync_url.startswith("postgresql+asyncpg://"):
+    sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql://")
+
+sync_engine = None
+try:
+    sync_engine = create_engine(sync_url)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+except Exception as e:
+    logger.error(f"Failed to bind sync engine: {e}")
+    SessionLocal = None
+
 class SearchCatalogInput(BaseModel):
     query: Any = Field(..., description="O produto que deseja buscar no catálogo. Ex: 'Pincel chanfrado para unhas'")
 
@@ -28,13 +45,24 @@ class SearchCatalogTool(BaseTool):
         # 1. Transformar a 'query' em Embedding
         vector_query = ingestion_pipeline.generate_embedding(str(query))
         
-        # 2. Busca Semântica no PostgreSQL (Mock por enquanto)
-        # return session.query(ProductKnowledge).order_by(ProductKnowledge.embedding.cosine_distance(vector_query)).limit(3).all()
-        
-        # Simulação do que o VectorDB vai retornar:
-        if "pincel" in query.lower():
-            return "Catálogo Retornado:\n1. Pincel Chanfrado Super Kolinsky (SKU: PC-001) - Preço: R$ 59,90 - Em estoque.\n2. Pincel Oval para Gel (SKU: PO-002) - Preço: R$ 45,00 - Em estoque."
-        elif "lash" in query.lower() or "cílio" in query.lower():
-            return "Catálogo Retornado:\n1. Cola Premium Amlash (SKU: CA-100) - Preço: R$ 120,00 - Baixo estoque.\n2. Removedor em Gel Amlash - Preço: R$ 65,00 - Em estoque."
-        else:
-            return "ALERTA DA TRANSAÇÃO: Nenhum produto foi encontrado no estoque. VOCÊ DEVE RESPONDER AO CLIENTE QUE A HANA BEAUTY NÃO TRABALHA COM ESTE PRODUTO ATUALMENTE. NÃO INVENTE OUTRO NOME."
+        if not SessionLocal:
+            return "ALERTA DA TRANSAÇÃO: Banco de dados indisponível no momento."
+            
+        try:
+            with SessionLocal() as session:
+                # Busca Semântica Real no PostgreSQL (RAG)
+                # Ordena pelos vetores mais próximos (menor distância cosseno) e pega os top 4
+                results = session.query(ProductKnowledge).order_by(
+                    ProductKnowledge.embedding.cosine_distance(vector_query)
+                ).limit(4).all()
+                
+                if results:
+                    formatted_results = "Catálogo Retornado da HANA BEAUTY (Dados Oficiais):\n"
+                    for r in results:
+                        formatted_results += f"- {r.name} (Categoria: {r.category}) - Preço: {r.price}\n  Detalhes: {r.description[:100]}...\n\n"
+                    return formatted_results
+                else:
+                    return "ALERTA DA TRANSAÇÃO: Nenhum produto foi encontrado no estoque. VOCÊ DEVE RESPONDER AO CLIENTE QUE A HANA BEAUTY NÃO TRABALHA COM ESTE PRODUTO ATUALMENTE. NÃO INVENTE OUTRO NOME."
+        except Exception as e:
+            logger.error(f"Erro no banco vetorial: {e}")
+            return "ALERTA: Erro ao buscar dados reais. Responda que o sistema de estoque está offline no momento."
