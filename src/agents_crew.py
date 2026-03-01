@@ -20,21 +20,19 @@ class ContentLabCrew:
         self.llm = LLMFactory.get_llm(provider="openai")
 
     def _create_agents(self):
-        # O Agente Especialista em Copywriting recebe a ferramenta de busca, Shopify e Comunicação
+        # O Agente Especialista em Copywriting recebe a ferramenta de busca, Shopify
         search_catalog_tool = SearchCatalogTool()
         shopify_history_tool = ShopifyCustomerActivityTool()
         shopify_cart_tool = ShopifyAbandonedCartTool()
-        whatsapp_tool = SendWhatsAppTool()
-        email_tool = SendEmailTool()
         
         copywriter = Agent(
             role='Senior Copywriter & Content Creator Hana Beauty',
             goal='Criar conteúdos de alta conversão, persuasivos e com tom de voz premium para clientes reais e múltiplos canais de venda (E-mail, Blog, Instagram).',
-            backstory='Você é especialista na indústria de beleza e cosméticos, conhecendo a fundo os produtos da Hana Beauty. Use o Catálogo para preços e a Shopify para histórico. Você redige desde e-mails em HTML até legendas de redes sociais e artigos engajadores de blog. Quando a tarefa exigir envio individual, utilize as ferramentas de WhatsApp ou E-mail para enviar suas criações aos clientes.',
+            backstory='Você é especialista na indústria de beleza e cosméticos, conhecendo a fundo os produtos da Hana Beauty. Use o Catálogo para preços e a Shopify para histórico. Você redige desde e-mails em HTML até legendas de redes sociais e artigos engajadores de blog. Retorne EXATAMENTE o conteúdo final (o texto do e-mail ou do post) de acordo com a estratégia solicitada, sem enviar para o cliente final. O Sistema será o responsável por salvar e aprovar seu rascunho.',
             verbose=False,
             allow_delegation=False,
             llm=self.llm,
-            tools=[search_catalog_tool, shopify_history_tool, shopify_cart_tool, whatsapp_tool, email_tool]
+            tools=[search_catalog_tool, shopify_history_tool, shopify_cart_tool]
         )
         return [copywriter]
 

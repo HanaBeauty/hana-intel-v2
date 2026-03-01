@@ -18,6 +18,26 @@ def process_strategic_intent(self, user_intent: str, content_type: str = "conte�
     # Executa o esquadrão de redação da Hana Beauty
     resultado_crew = crew_content_lab.process_campaign(user_intent, content_type)
     
+    try:
+        from src.database import sync_session_maker
+        from src.models import Campaign, CampaignStatus
+        if sync_session_maker:
+            with sync_session_maker() as session:
+                nova_campanha = Campaign(
+                    title=f"Campanha Gerada: {content_type.capitalize()}",
+                    intent=user_intent,
+                    channel=content_type,
+                    generated_content=str(resultado_crew),
+                    status=CampaignStatus.draft
+                )
+                session.add(nova_campanha)
+                session.commit()
+                logger.info(f"💾 [Celery Worker] Campanha salva com sucesso (Status: Draft, ID: {nova_campanha.id})")
+        else:
+            logger.warning("⚠️ sync_session_maker indisponível. Campanha não foi persistida!")
+    except Exception as e:
+        logger.error(f"❌ Erro ao salvar Draft da Campanha no PostgreSQL: {e}")
+
     logger.info(f"✅ [Celery Worker] Tarefa concluída.")
     return {"status": "success", "result": resultado_crew}
 

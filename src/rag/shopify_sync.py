@@ -29,7 +29,7 @@ class ShopifyKnowledgeSync:
             logger.error("🚫 Credenciais da Shopify ausentes. Abortando sync.")
             return []
 
-        url = f"{self.base_url}/products.json?status=active"
+        url = f"{self.base_url}/products.json?status=active&limit=250"
         headers = {
             "X-Shopify-Access-Token": self.access_token,
             "Content-Type": "application/json"

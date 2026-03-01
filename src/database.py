@@ -32,6 +32,23 @@ except Exception as e:
     engine = None
     async_session_maker = None
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+sync_url = raw_url.replace("postgresql+asyncpg://", "postgresql://", 1)
+try:
+    sync_engine = create_engine(
+        sync_url,
+        echo=False,
+        pool_size=10,
+        max_overflow=20
+    )
+    sync_session_maker = sessionmaker(bind=sync_engine, expire_on_commit=False)
+except Exception as e:
+    logger.error(f"❌ Failed to initialize sync engine: {e}")
+    sync_engine = None
+    sync_session_maker = None
+
 Base = declarative_base()
 
 async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
