@@ -31,9 +31,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copia todo o código fonte para dentro da imagem
 COPY . .
 
+# Garante que o script de inícialização unificado tem permissão de execução
+COPY start.sh .
+RUN chmod +x start.sh
+
 # Expõe a porta que o FastAPI usará
 EXPOSE 8000
 
-# O comando padrão iniciará a API web. 
-# No Coolify, para criar o Worker, você fará um "Override" do comando de start para: celery -A src.celery_app worker -l info
-CMD ["uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# O comando padrão iniciará a API web e o Celery Worker no próprio container
+CMD ["./start.sh"]
