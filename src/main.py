@@ -32,10 +32,6 @@ from src.routers import dashboard_api
 app.include_router(webhooks.router)
 app.include_router(dashboard_api.router)
 
-@app.get("/", tags=["Health"])
-async def root() -> Dict[str, str]:
-    return {"message": "Hana Intel 2.0 API is running."}
-
 @app.get("/health", tags=["Health"])
 async def health_check() -> Dict[str, Any]:
     # Placeholder para checagens futuras (Redis, DB)
