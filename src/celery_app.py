@@ -7,7 +7,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery(
     "hana_v2_worker",
     broker=REDIS_URL,
-    include=["src.tasks.hunter_task", "src.tasks.campaign_tasks"]
+    include=["src.workers.hunter_task", "src.workers.campaign_tasks"]
 )
 
 # Configurações otimizadas para tarefas de IA (Long-running)

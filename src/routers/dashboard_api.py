@@ -32,7 +32,7 @@ async def get_pending_campaigns(db: AsyncSession = Depends(get_db_session)):
         for c in campaigns
     ]
 
-from src.tasks.campaign_tasks import publish_campaign_task
+from src.workers.campaign_tasks import publish_campaign_task
 
 @router.post("/campaigns/{campaign_id}/approve")
 async def approve_campaign(campaign_id: int, db: AsyncSession = Depends(get_db_session)):
