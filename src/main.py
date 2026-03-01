@@ -49,6 +49,7 @@ from .tasks import process_strategic_intent
 
 class IntentRequest(BaseModel):
     intent: str
+    content_type: str = "conteúdo geral"
 
 @app.post("/api/v1/intent", tags=["Hana AI Core"])
 async def process_intent_sync(request: IntentRequest) -> Dict[str, Any]:
@@ -59,7 +60,7 @@ async def process_intent_sync(request: IntentRequest) -> Dict[str, Any]:
 @app.post("/api/v2/intent/async", tags=["Hana AI Core Background"])
 async def process_intent_async(request: IntentRequest) -> Dict[str, Any]:
     """Enfileira a intenção no Redis via Celery e libera o usuário instantaneamente."""
-    task = process_strategic_intent.delay(request.intent)
+    task = process_strategic_intent.delay(request.intent, request.content_type)
     return {
         "status": "queued",
         "task_id": task.id,

@@ -28,9 +28,9 @@ class ContentLabCrew:
         email_tool = SendEmailTool()
         
         copywriter = Agent(
-            role='Senior Copywriter Hana Beauty',
-            goal='Escrever e-mails de alta conversão, persuasivos e com tom de voz premium para clientes reais.',
-            backstory='Você é especialista na indústria de beleza e cosméticos, conhecendo a fundo os produtos da Hana Beauty. Use o Catálogo para preços e a Shopify para descobrir se o cliente tem perfil VIP (LTV alto) ou se você deve criar uma mensagem de recall de carrinho abandonado. Quando a tarefa exigir ação imediata, utilize as as ferramentas de WhatsApp ou E-mail para enviar suas criações aos clientes.',
+            role='Senior Copywriter & Content Creator Hana Beauty',
+            goal='Criar conteúdos de alta conversão, persuasivos e com tom de voz premium para clientes reais e múltiplos canais de venda (E-mail, Blog, Instagram).',
+            backstory='Você é especialista na indústria de beleza e cosméticos, conhecendo a fundo os produtos da Hana Beauty. Use o Catálogo para preços e a Shopify para histórico. Você redige desde e-mails em HTML até legendas de redes sociais e artigos engajadores de blog. Quando a tarefa exigir envio individual, utilize as ferramentas de WhatsApp ou E-mail para enviar suas criações aos clientes.',
             verbose=False,
             allow_delegation=False,
             llm=self.llm,
@@ -38,20 +38,20 @@ class ContentLabCrew:
         )
         return [copywriter]
 
-    def process_campaign(self, strategy_directive: str) -> str:
+    def process_campaign(self, strategy_directive: str, content_type: str = "conteúdo geral") -> str:
         """
         Gera conteúdo baseado em uma diretiva enviada pela Hana AI Core (Manager).
         """
         if not self.llm:
-            return "Demostração: Conteúdo gerado baseado em: " + strategy_directive
+            return f"Demostração: Conteúdo gerado ({content_type}) baseado em: " + strategy_directive
 
-        logger.info(f"🎨 [CrewAI] Iniciando redação para diretiva: {strategy_directive[:50]}...")
+        logger.info(f"🎨 [CrewAI] Iniciando redação ({content_type}) para diretiva: {strategy_directive[:50]}...")
         
         agents = self._create_agents()
         
         redacao_task = Task(
-            description=f'Escreva 1 e-mail focado na seguinte estratégia aprovada pela CEO: {strategy_directive}. O e-mail deve ter assunto e corpo formatado para envio direto.',
-            expected_output='1 Assunto de Email matador e o Corpo do e-mail em formato HTML limpo pronto para envio.',
+            description=f'Escreva um(a) {content_type} focado na seguinte estratégia aprovada pela CEO: {strategy_directive}. O texto deve estar formatado para o canal específico (ex: HTML se for e-mail, markdown se for blog, hashtags e emojis se for rede social).',
+            expected_output=f'O conteúdo final formatado adequadamente como um(a) {content_type}, polido, persuasivo e pronto para publicação ou envio.',
             agent=agents[0]
         )
 
