@@ -13,8 +13,10 @@ import os
 from src.models import ProductKnowledge
 
 sync_url = os.getenv("DATABASE_URL", "postgresql://hana_admin:c0c1164a842da069a9a9@hana-db:5432/hana_intel")
+if sync_url.startswith("postgres://"):
+    sync_url = sync_url.replace("postgres://", "postgresql://", 1)
 if sync_url.startswith("postgresql+asyncpg://"):
-    sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql://")
+    sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql://", 1)
 
 sync_engine = None
 try:
