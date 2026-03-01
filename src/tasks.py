@@ -53,13 +53,25 @@ def process_evolution_webhook_task(self, payload: dict):
         # 1. Lógica de Intervenção Humana (Handoff)
         handoff_key = f"human_handoff:{number}"
         if key.get("fromMe") is True:
+            comando = texto_msg.strip().lower()
+            
+            # Comandos de Sistema via WhatsApp Web (Sobrecarga de Administrador)
+            if comando == "/bot_on":
+                logger.info(f"🟢 Comando de Sistema: Bot acordado manualmente para {number}.")
+                r.delete(handoff_key)
+                return {"status": "ignored", "reason": "system_command_bot_on"}
+            elif comando == "/bot_off":
+                logger.info(f"🔴 Comando de Sistema: Bot silenciado manualmente para {number}.")
+                r.setex(handoff_key, 43200, "active") # 12 horas
+                return {"status": "ignored", "reason": "system_command_bot_off"}
+
             logger.info(f"⏸️ Mensagem enviada pela Loja (fromMe). Ativando Hand-off para {number} por 12 horas.")
             r.setex(handoff_key, 43200, "active") # 12 horas em segundos
             
-            # Mesmo sendo fromMe, vamos gravar no histórico como [Hana Beauty] para a IA ter contexto futuro
+            # Mesmo sendo fromMe e não sendo comando, gravamos no histórico
             history_key = f"chat_history:{number}"
             r.rpush(history_key, f"[Hana Beauty]: {texto_msg}")
-            r.ltrim(history_key, -10, -1) # Mantém as últimas 10 mensagens (LIFO/Right-Push)
+            r.ltrim(history_key, -10, -1)
             return {"status": "ignored", "reason": "human_handoff_activated"}
             
         # 2. Verificação de Handoff já Ativo
