@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from crewai.tools import BaseTool
+from langchain.tools import BaseTool
 from typing import Type
 import smtplib
 from email.mime.text import MIMEText

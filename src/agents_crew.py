@@ -47,7 +47,7 @@ class ContentLabCrew:
 
         logger.info(f"🎨 [CrewAI] Iniciando redação para diretiva: {strategy_directive[:50]}...")
         
-        agents = self.create_agents()
+        agents = self._create_agents()
         
         redacao_task = Task(
             description=f'Escreva 1 e-mail focado na seguinte estratégia aprovada pela CEO: {strategy_directive}. O e-mail deve ter assunto e corpo formatado para envio direto.',
