@@ -1,5 +1,5 @@
 from src.celery_app import celery_app
-from src.database import AsyncSessionLocal
+from src.database import async_session_maker
 from sqlalchemy.future import select
 from sqlalchemy import or_
 from src.models import Campaign, CampaignStatus
@@ -13,7 +13,7 @@ async def run_hunter_logic():
     """Lógica assíncrona real do caçador de oportunidades"""
     logger.info("Iniciando Caçador de Oportunidades Hana Intel...")
     
-    async with AsyncSessionLocal() as db:
+    async with async_session_maker() as db:
         # TODO: No futuro, faremos match real com a tabela Customers da Shopify.
         # Por hora, geramos oportunidades mockadas com base em eventos que a IA observaria
         

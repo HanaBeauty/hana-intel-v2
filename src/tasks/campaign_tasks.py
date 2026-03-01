@@ -4,7 +4,7 @@ import httpx
 import asyncio
 import logging
 from src.celery_app import celery_app
-from src.database import AsyncSessionLocal
+from src.database import async_session_maker
 from sqlalchemy.future import select
 from src.models import Campaign, CampaignStatus
 from datetime import datetime, timedelta
@@ -24,7 +24,7 @@ async def process_campaign_dispatch(campaign_id: int):
     
     r = get_redis_client()
     
-    async with AsyncSessionLocal() as db:
+    async with async_session_maker() as db:
         query = select(Campaign).where(Campaign.id == campaign_id)
         result = await db.execute(query)
         campaign = result.scalars().first()
