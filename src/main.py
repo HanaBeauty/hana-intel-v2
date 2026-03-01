@@ -25,7 +25,9 @@ app.add_middleware(
 )
 
 # Registrando módulos independentes (Routers)
+from src.routers import dashboard_api
 app.include_router(webhooks.router)
+app.include_router(dashboard_api.router)
 
 @app.get("/", tags=["Health"])
 async def root() -> Dict[str, str]:

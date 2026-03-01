@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Dark Premium Palette (Hana Beauty) */
+  --color-bg-base: #0a0a0b;
+  --color-bg-surface: #141416;
+  --color-bg-surface-elevated: #1e1e24;
+  
+  --color-primary: #d4af37; /* Metallic Gold */
+  --color-primary-hover: #b5952d;
+  --color-primary-light: rgba(212, 175, 55, 0.15);
+  
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  
+  --color-border: #27272a;
+  --color-border-glow: rgba(212, 175, 55, 0.3);
+  
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-warning: #f59e0b;
+  
+  /* Glassmorphism settings */
+  --glass-bg: rgba(20, 20, 22, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-blur: blur(12px);
+  
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: var(--color-text-primary);
+  letter-spacing: -0.02em;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-primary-hover);
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-base);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
+
+/* Utility Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Glass panel utility */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border-radius: 12px;
+}
