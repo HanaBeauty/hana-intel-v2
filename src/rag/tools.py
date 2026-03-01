@@ -37,4 +37,4 @@ class SearchCatalogTool(BaseTool):
         elif "lash" in query.lower() or "cílio" in query.lower():
             return "Catálogo Retornado:\n1. Cola Premium Amlash (SKU: CA-100) - Preço: R$ 120,00 - Baixo estoque.\n2. Removedor em Gel Amlash - Preço: R$ 65,00 - Em estoque."
         else:
-            return "Nenhum produto exato encontrado para essa busca. Sugira categorias amplas."
+            return "ALERTA DA TRANSAÇÃO: Nenhum produto foi encontrado no estoque. VOCÊ DEVE RESPONDER AO CLIENTE QUE A HANA BEAUTY NÃO TRABALHA COM ESTE PRODUTO ATUALMENTE. NÃO INVENTE OUTRO NOME."

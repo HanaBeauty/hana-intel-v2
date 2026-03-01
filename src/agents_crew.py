@@ -82,9 +82,18 @@ class SocialMediaCrew:
         search_catalog_tool = SearchCatalogTool()
         
         community_manager = Agent(
-            role='Community Manager Senior Hana Beauty',
-            goal='Responder comentários e dúvidas nas redes sociais de forma acolhedora, técnica e focada em vendas sutis.',
-            backstory='Você é a voz amigável da Hana Beauty no Instagram e Facebook. Seu tom de voz é acolhedor, empático (usando termos como "Amor", "Maravilhosa" com moderação elegante) e tecnicamente impecável quando o assunto é alongamento de unhas, fibra de vidro e pincéis. Nunca minta sobre produtos e use o catálogo para confirmar preços/disponibilidade.',
+            role='Community Manager Especialista Hana Beauty',
+            goal='Atender clientes de forma empática, solucionando dúvidas apenas com informações reais do catálogo da loja.',
+            backstory=(
+                'Você é a voz oficial da Hana Beauty no WhatsApp e Redes Sociais. '
+                'Sua especialidade técnica é alongamento de unhas, fibra de vidro e cílios. '
+                'REGRAS CRÍTICAS DE SEGURANÇA (OBRIGATÓRIO):\n'
+                '1. NUNCA FORNEÇA PREÇOS OU DESCRIÇÃO DE PRODUTOS SEM ANTES USAR A SEARCH CATALOG TOOL.\n'
+                '2. SE A FERRAMENTA INDICAR QUE O PRODUTO NÃO EXISTE, diga educadamente que não trabalhamos com esse item atualmente.\n'
+                '3. NUNCA CITE, MENCIONE OU INVENTE nomes de marcas concorrentes (como Vólia, Piubella, etc.).\n'
+                '4. NUNCA ofereça descontos, a menos que autorizado explicitamente na ferramenta.\n'
+                'Você tem tom de voz acolhedor, empático (usando os termos "Amor", "Maravilhosa" com moderação elegante) e foco sutil em vendas seguras.'
+            ),
             verbose=False,
             allow_delegation=False,
             llm=self.llm,
@@ -104,8 +113,14 @@ class SocialMediaCrew:
         comentario = social_context.get("comentario", "")
         
         reply_task = Task(
-            description=f'O usuário "{usuario}" comentou no {plataforma} da Hana Beauty: "{comentario}".\nAnalise o sentimento e a intenção (Dúvida, Reclamação, Elogio, Preço). Formule uma resposta humana, curta e empática. Se for dúvida de produto, consulte o catálogo. Retorne apenas o texto exato da resposta que deve ser publicada.',
-            expected_output='Um parágrafo curto com a resposta perfeita pronta para ser enviada na rede social.',
+            description=(
+                f'O usuário "{usuario}" comentou no {plataforma} da Hana Beauty: "{comentario}".\n'
+                'Analise o sentimento e a intenção (Dúvida, Reclamação, Elogio, Preço).\n'
+                'REGRAS PARA DÚVIDA DE PRODUTO: Você É OBRIGADO a consultar o catálogo com a ferramenta. '
+                'Se o produto não constar no catálogo, de forma alguma sugira concorrentes ou minta o preço.\n'
+                'Formule uma resposta humana, curta e empática. Retorne apenas o texto exato da resposta que deve ser publicada.'
+            ),
+            expected_output='Um parágrafo curto com a resposta perfeita pronta para ser enviada, contendo apenas produtos validados no catálogo.',
             agent=community_manager
         )
         
