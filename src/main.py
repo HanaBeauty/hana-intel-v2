@@ -1,7 +1,10 @@
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from typing import Dict, Any
 import logging
+import os
 from src.tasks import process_strategic_intent
 from src.routers import webhooks
 
@@ -68,3 +71,29 @@ async def process_intent_async(request: IntentRequest) -> Dict[str, Any]:
         "task_id": task.id,
         "message": "Tarefa de orquestração agendada com sucesso. A UI será notificada assim que a IA terminar."
     }
+
+# ---------------------------------------------------------
+# ROTEAMENTO FRONTEND REACT VITE (DASHBOARD V2.0)
+# ---------------------------------------------------------
+# Verifica se a pasta dist existe (Em produção no container Docker)
+frontend_dist_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "frontend", "dist")
+
+if os.path.exists(frontend_dist_path):
+    # Monta todos os arquivos estáticos primeiro (/assets, vite.svg, etc)
+    app.mount("/assets", StaticFiles(directory=os.path.join(frontend_dist_path, "assets")), name="assets")
+    
+    # Catch-All para o React Router (Qualquer rota que não seja /api devolve o index.html do Vite)
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def serve_react_app(full_path: str):
+        # Evita conflitos com rotas da api
+        if full_path.startswith("api/"):
+            return {"error": "API route not found"}
+        
+        # Pode ser que o app peça um favicon na raiz, serve direto
+        potential_file = os.path.join(frontend_dist_path, full_path)
+        if os.path.isfile(potential_file):
+            return FileResponse(potential_file)
+            
+        return FileResponse(os.path.join(frontend_dist_path, "index.html"))
+else:
+    logger.warning("⚠️ Diretório 'frontend/dist' não encontrado. O React Dashboard NÃO será servido pela FastAPI.")
