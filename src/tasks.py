@@ -36,42 +36,75 @@ def process_evolution_webhook_task(self, payload: dict):
         message_info = data.get("message", {})
         key = data.get("key", {})
         
-        # Ignora mensagens enviadas pela própria Hana (fromMe = True) para evitar looping
-        if key.get("fromMe") is True:
-            logger.info("⏸️ Ignorando mensagem enviada por nós mesmos.")
-            return {"status": "ignored", "reason": "fromMe"}
-            
+        # Identificando a origem da mensagem e configurando o client Redis puro (usando a mesma var do Celery)
+        import redis
+        import json
+        redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+        r = redis.Redis.from_url(redis_url, decode_responses=True)
+        
         # Pega o número do cliente e o texto da mensagem
         remote_jid = key.get("remoteJid", "Desconhecido")
-        texto_msg = message_info.get("conversation", "")
+        number = remote_jid.replace("@s.whatsapp.net", "")
         
-        # Casos onde o texto vem dentro de message.extendedTextMessage.text
+        texto_msg = message_info.get("conversation", "")
         if not texto_msg and isinstance(message_info.get("extendedTextMessage"), dict):
             texto_msg = message_info["extendedTextMessage"].get("text", "")
+
+        # 1. Lógica de Intervenção Humana (Handoff)
+        handoff_key = f"human_handoff:{number}"
+        if key.get("fromMe") is True:
+            logger.info(f"⏸️ Mensagem enviada pela Loja (fromMe). Ativando Hand-off para {number} por 12 horas.")
+            r.setex(handoff_key, 43200, "active") # 12 horas em segundos
             
+            # Mesmo sendo fromMe, vamos gravar no histórico como [Hana Beauty] para a IA ter contexto futuro
+            history_key = f"chat_history:{number}"
+            r.rpush(history_key, f"[Hana Beauty]: {texto_msg}")
+            r.ltrim(history_key, -10, -1) # Mantém as últimas 10 mensagens (LIFO/Right-Push)
+            return {"status": "ignored", "reason": "human_handoff_activated"}
+            
+        # 2. Verificação de Handoff já Ativo
+        if r.exists(handoff_key):
+            logger.info(f"🤫 IA Silenciada: O cliente {number} está sob atendimento humano e enviou resposta.")
+            # Continuamos salvando a resposta do cliente para o histórico não ficar quebrado quando a IA voltar
+            history_key = f"chat_history:{number}"
+            r.rpush(history_key, f"[Cliente]: {texto_msg}")
+            r.ltrim(history_key, -10, -1)
+            return {"status": "ignored", "reason": "human_handoff_active_silence"}
+
         logger.info(f"📱 Nova mensagem WhatsApp de {remote_jid}: {texto_msg}")
+        
+        # 3. Lógica de Memória Conversacional
+        history_key = f"chat_history:{number}"
+        r.rpush(history_key, f"[Cliente]: {texto_msg}")
+        r.ltrim(history_key, -10, -1)
+        
+        # Resgatando o histórico completo (formatado como string para a IA ler)
+        history_list = r.lrange(history_key, 0, -1)
+        historico_formatado = "\n".join(history_list)
         
         # Construindo o contexto para enviar ao Agente do CrewAI
         wa_context = {
             "plataforma": "WhatsApp",
-            "usuario": remote_jid.replace("@s.whatsapp.net", ""),
-            "comentario": texto_msg
+            "usuario": number,
+            "comentario": texto_msg,
+            "historico": historico_formatado
         }
         
-        logger.info("🧠 Disparando Agente de Atendimento/Vendas para analisar a mensagem...")
+        logger.info("🧠 Disparando Agente RAG para analisar a mensagem contextualizada...")
         resposta = crew_social_media.process_social_comment(wa_context)
         
         logger.info(f"✅ [Celery Worker] Resposta do Agente Gerada:\n{resposta}")
+        
+        # Assim que a IA responde, gravamos a resposta dela no histórico do Redis
+        r.rpush(history_key, f"[Hana IA]: {resposta}")
+        r.ltrim(history_key, -10, -1)
         
         # Enviar a resposta de volta via Evolution API
         try:
             # A instância vem no payload (ex: "Hana_Intel_PRO")
             instance_name = payload.get("instance", "Hana_Intel_PRO")
             evo_url = os.getenv("EVOLUTION_API_URL", "https://webhook.adsai.com.br")
-            evo_token = os.getenv("EVOLUTION_API_TOKEN", "978C405A-31F2-439D-9A63-C439ADEEF30E") # Fallback provisório baseado no seu log
-            
-            # Formata o número (remoteJid pode vir como 551199999999@s.whatsapp.net)
-            number = remote_jid.replace("@s.whatsapp.net", "")
+            evo_token = os.getenv("EVOLUTION_API_TOKEN", "978C405A-31F2-439D-9A63-C439ADEEF30E") # Fallback provisório
             
             send_url = f"{evo_url.rstrip('/')}/message/sendText/{instance_name}"
             headers = {

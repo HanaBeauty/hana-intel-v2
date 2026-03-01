@@ -107,7 +107,8 @@ class SocialMediaCrew:
 
     def process_social_comment(self, social_context: dict) -> str:
         """
-        Inicia o agente social para responder um comentário específico recebido via N8N.
+        Inicia o agente social para responder um comentário específico recebido via N8N/Evolution.
+        Agora suporta Memória Conversacional via string injetada.
         """
         agents = self._create_agents()
         community_manager = agents[0]
@@ -115,16 +116,26 @@ class SocialMediaCrew:
         plataforma = social_context.get("plataforma", "Rede Social")
         usuario = social_context.get("usuario", "Cliente")
         comentario = social_context.get("comentario", "")
+        historico = social_context.get("historico", "")
+        
+        contexto_prompt = f'O usuário "{usuario}" está falando conosco via {plataforma}.\n\n'
+        
+        if historico:
+            contexto_prompt += f'### HISTÓRICO RECENTE DA CONVERSA ###\n{historico}\n\n'
+        
+        contexto_prompt += (
+            f'### NOVA MENSAGEM DO CLIENTE ###\n'
+            f'"{comentario}"\n\n'
+            'Sua Tarefa: Analise a nova mensagem MANTENDO o contexto do histórico acima (se existir).\n'
+            '- Se o cliente disser "Quero um só" ou "159,00", olhe no histórico qual produto ele está se referindo e finalize a venda consultiva.\n'
+            '- REGRAS PARA DÚVIDA DE PRODUTO: Você É OBRIGADO a consultar o catálogo com a ferramenta (Search Catalog Tool). '
+            'Se o produto não constar no catálogo da ferramenta, não minta e não sugira concorrentes.\n'
+            '- Formule uma resposta humana, curta e empática. Retorne APENAS o texto exato da sua resposta, sem introduções ou aspas.'
+        )
         
         reply_task = Task(
-            description=(
-                f'O usuário "{usuario}" comentou no {plataforma} da Hana Beauty: "{comentario}".\n'
-                'Analise o sentimento e a intenção (Dúvida, Reclamação, Elogio, Preço).\n'
-                'REGRAS PARA DÚVIDA DE PRODUTO: Você É OBRIGADO a consultar o catálogo com a ferramenta. '
-                'Se o produto não constar no catálogo, de forma alguma sugira concorrentes ou minta o preço.\n'
-                'Formule uma resposta humana, curta e empática. Retorne apenas o texto exato da resposta que deve ser publicada.'
-            ),
-            expected_output='Um parágrafo curto com a resposta perfeita pronta para ser enviada, contendo apenas produtos validados no catálogo.',
+            description=contexto_prompt,
+            expected_output='Um parágrafo curto com a continuação perfeita da conversa pronta para envio, contendo produtos validados no catálogo e seguindo a persona premium.',
             agent=community_manager
         )
         
