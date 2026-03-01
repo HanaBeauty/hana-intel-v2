@@ -32,6 +32,8 @@ async def get_pending_campaigns(db: AsyncSession = Depends(get_db_session)):
         for c in campaigns
     ]
 
+from src.tasks.campaign_tasks import publish_campaign_task
+
 @router.post("/campaigns/{campaign_id}/approve")
 async def approve_campaign(campaign_id: int, db: AsyncSession = Depends(get_db_session)):
     """Aprova uma campanha e a envia para a fila de disparo (Celery)"""
@@ -45,8 +47,8 @@ async def approve_campaign(campaign_id: int, db: AsyncSession = Depends(get_db_s
     campaign.status = CampaignStatus.approved
     await db.commit()
     
-    # Aqui chamaremos a Task Celery de Disparo (a ser implementada)
-    # publish_campaign_task.delay(campaign_id)
+    # Envia para o motor de disparo assíncrono (que tem a regra Anti-Fadiga embutida)
+    publish_campaign_task.delay(campaign_id)
     
     return {"message": "Campanha aprovada e enviada para disparo.", "id": campaign_id}
 

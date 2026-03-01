@@ -7,7 +7,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery(
     "hana_v2_worker",
     broker=REDIS_URL,
-    include=["src.tasks"]
+    include=["src.tasks.hunter_task", "src.tasks.campaign_tasks"]
 )
 
 # Configurações otimizadas para tarefas de IA (Long-running)
@@ -20,3 +20,14 @@ celery_app.conf.update(
     worker_prefetch_multiplier=1, # Para tarefas demoradas (LLMs), não dar prefetch
     task_ignore_result=True, # Ignora armazenamento de resultados reduzindo erros de backend do Redis
 )
+
+# Configuração do Agendador Autônomo (Celery Beat)
+from celery.schedules import crontab
+
+celery_app.conf.beat_schedule = {
+    # O Caçador roda todo dia às 08h da manhã.
+    "hunt-opportunities-daily-morning": {
+        "task": "tasks.opportunity_hunter",
+        "schedule": crontab(hour=8, minute=0),
+    }
+}
