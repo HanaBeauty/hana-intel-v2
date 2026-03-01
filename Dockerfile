@@ -22,10 +22,7 @@ COPY requirements.txt .
 # Atualiza pip e ferramentas essenciais primeiro
 RUN pip install --upgrade pip setuptools wheel
 
-# Técnica Extrema Antibloqueio (OOM Killer): Instala 1 pacote por vez e esvazia a RAM imediatamente
-RUN cat requirements.txt | xargs -n 1 pip install --no-cache-dir || true
-
-# Como o xargs pode engolir alguns erros ou pular deps aninhadas, damos um passe final consolidado
+# Dependências estritamente tipadas, garantindo que o OOM não ocorrerá por backtracking
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copia todo o código fonte para dentro da imagem
