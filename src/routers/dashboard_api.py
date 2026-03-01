@@ -101,6 +101,77 @@ async def toggle_handoff(number: str, action: str):
     else:
         raise HTTPException(status_code=400, detail="Ação inválida")
 
+@router.get("/chat/{remoteJid}/history")
+async def get_chat_history(remoteJid: str):
+    """Retorna o histórico completo de uma conversa com os papéis (user vs bot/admin)"""
+    r = get_redis_client()
+    history_key = f"chat_history:{remoteJid}"
+    
+    # O Redis armazena como strings puras: "Usuário: texto", "Hana: texto"
+    # Precisamos estruturar para o React consumir facilmente
+    raw_history = r.lrange(history_key, 0, -1)
+    
+    structured_history = []
+    
+    for line in raw_history:
+        if line.startswith("User:") or line.startswith("Usuário:"):
+            sender = "user"
+            text = line.split(":", 1)[1].strip() if ":" in line else line
+        elif "Humano:" in line or "Juliano:" in line:
+            sender = "admin"
+            text = line.split(":", 1)[1].strip() if ":" in line else line
+        else:
+            sender = "bot"
+            text = line.split(":", 1)[1].strip() if ":" in line else line
+            
+        structured_history.append({
+            "sender": sender,
+            "text": text,
+            "time": "Histórico" # Timer real dependeria de salvar um JSON no array invés de string pura. Mocado por agora.
+        })
+        
+    return structured_history
+
+# Modelo para o Envio
+from pydantic import BaseModel
+class AdminMessageRequest(BaseModel):
+    message: str
+
+@router.post("/chat/{remoteJid}/send")
+async def send_admin_message(remoteJid: str, payload: AdminMessageRequest):
+    """Envia uma mensagem direta do Painel (Admin) para o Cliente via Evolution API e força Handoff"""
+    import httpx
+    
+    EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL")
+    EVOLUTION_API_TOKEN = os.getenv("EVOLUTION_API_TOKEN")
+    
+    # Ao humano Enviar mensagem, a IA precisa calar a boca automaticamente (Handoff implícito)
+    r = get_redis_client()
+    r.setex(f"human_handoff:{remoteJid}", 43200, "active")
+    
+    # Registra a fala Humana no Redes (Para a IA ter contexto se for reativada)
+    # A IA precisa saber o que o Humano disse para não repetir
+    admin_msg = f"Juliano (Humano): {payload.message}"
+    r.rpush(f"chat_history:{remoteJid}", admin_msg)
+    
+    url = f"{EVOLUTION_API_URL}/message/sendText/hana_intel"
+    headers = {
+        "apikey": EVOLUTION_API_TOKEN,
+        "Content-Type": "application/json"
+    }
+    data = {
+        "number": remoteJid,
+        "text": payload.message
+    }
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            resp = await client.post(url, headers=headers, json=data, timeout=10.0)
+            resp.raise_for_status()
+            return {"status": "success", "message": "Mensagem enviada com sucesso", "handoff": True}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Falha ao enviar mensagem: {str(e)}")
+
 # --- Torre de Controle (Telemetria) ---
 @router.get("/telemetry")
 async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):
