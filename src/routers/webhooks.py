@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Body, HTTPException, Request
 from typing import Dict, Any
 import logging
-from src.tasks import process_n8n_webhook_task, process_evolution_webhook_task
+from src.tasks import process_evolution_webhook_task
 
 logger = logging.getLogger(__name__)
 
