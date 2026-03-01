@@ -1,5 +1,7 @@
 import time
 import logging
+import os
+import requests
 from .celery_app import celery_app
 from .agents_crew import crew_content_lab, crew_social_media
 
@@ -61,7 +63,37 @@ def process_evolution_webhook_task(self, payload: dict):
         resposta = crew_social_media.process_social_comment(wa_context)
         
         logger.info(f"✅ [Celery Worker] Resposta do Agente Gerada:\n{resposta}")
-        # Next Step: Disparar um POST de volta para a Evolution (via SendWhatsAppTool) com 'resposta'
+        
+        # Enviar a resposta de volta via Evolution API
+        try:
+            # A instância vem no payload (ex: "Hana_Intel_PRO")
+            instance_name = payload.get("instance", "Hana_Intel_PRO")
+            evo_url = os.getenv("EVOLUTION_API_URL", "https://webhook.adsai.com.br")
+            evo_token = os.getenv("EVOLUTION_API_TOKEN", "978C405A-31F2-439D-9A63-C439ADEEF30E") # Fallback provisório baseado no seu log
+            
+            # Formata o número (remoteJid pode vir como 551199999999@s.whatsapp.net)
+            number = remote_jid.replace("@s.whatsapp.net", "")
+            
+            send_url = f"{evo_url.rstrip('/')}/message/sendText/{instance_name}"
+            headers = {
+                "apikey": evo_token,
+                "Content-Type": "application/json"
+            }
+            body = {
+                "number": number,
+                "text": resposta
+            }
+            
+            logger.info(f"📤 Enviando resposta para {send_url} (Destino: {number})")
+            resp = requests.post(send_url, json=body, headers=headers, timeout=15)
+            
+            if resp.status_code in (200, 201):
+                logger.info("✅ Mensagem enviada com sucesso pela Evolution API!")
+            else:
+                logger.error(f"❌ Erro ao enviar para Evolution. Status: {resp.status_code}, Body: {resp.text}")
+                
+        except Exception as e:
+            logger.error(f"❌ Falha crítica ao tentar disparar webhook de resposta: {e}")
         
         return {"status": "success", "event": event_type, "agent_response": resposta, "remote_jid": remote_jid}
         
