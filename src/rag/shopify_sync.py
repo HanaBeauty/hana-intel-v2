@@ -52,11 +52,12 @@ class ShopifyKnowledgeSync:
                         "name": prod.get("title", ""),
                         "description": prod.get("body_html", "Sem descrição"),
                         "price": f"R$ {base_price:.2f}".replace(".", ","),
-                        "category": prod.get("product_type", "Geral")
+                        "category": prod.get("product_type", "Geral"),
+                        "tags": prod.get("tags", "")
                     }
                     products_data.append(product_info)
                     
-                logger.info(f"✅ {len(products_data)} produtos extraídos da Shopify.")
+                logger.info(f"✅ {len(products_data)} produtos extraídos da Shopify (com tags técnicas).")
                 return products_data
             
             except Exception as e:
@@ -85,7 +86,7 @@ class ShopifyKnowledgeSync:
                     existing_prod = result.scalars().first()
                     
                     # Formatar string rica para vetorização
-                    text_to_embed = f"Produto: {prod['name']}. Categoria: {prod['category']}. Preço: {prod['price']}. Detalhes: {prod['description']}"
+                    text_to_embed = f"Produto: {prod['name']}. Categoria: {prod['category']}. Tags: {prod.get('tags', '')}. Preço: {prod['price']}. Detalhes: {prod['description']}"
                     
                     # Gerar Embedding
                     embedding_vector = ingestion_pipeline.generate_embedding(text_to_embed)

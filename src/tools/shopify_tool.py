@@ -112,3 +112,64 @@ class ShopifyAbandonedCartTool(BaseTool):
         except Exception as e:
             logger.error(f"Erro ao acessar Shopify Checkouts API: {str(e)}")
             return f"Erro ao consultar checkouts da Shopify: {str(e)}"
+
+class ShopifyOrderStatusInput(BaseModel):
+    query_param: str = Field(..., description="Número de telefone (ex: 551199999999) ou e-mail do cliente para buscar o status do pedido na Shopify.")
+
+class ShopifyOrderStatusTool(BaseTool):
+    name: str = "Buscar Status de Entrega do Pedido Shopify"
+    description: str = (
+        "Utilize CADA VEZ QUE o cliente perguntar 'Onde está meu pedido', 'Já foi enviado?', 'Qual o prazo?', etc. "
+        "Você deve fornecer o telefone ou o email do cliente recuperado do [Historico] como query."
+    )
+    args_schema: Type[BaseModel] = ShopifyOrderStatusInput
+
+    def _run(self, query_param: str) -> str:
+        shop_url = os.getenv("SHOPIFY_STORE_URL")
+        access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
+        
+        if not shop_url or not access_token:
+            return "Mock: Seu pedido #1234 está sendo separado pela transportadora J&T Express e será enviado amanhã."
+
+        headers = {
+            "Content-Type": "application/json",
+            "X-Shopify-Access-Token": access_token
+        }
+        
+        search_query = query_param.replace("@s.whatsapp.net", "").replace("+", "")
+        # Query the most recent order associated with this query (email or phone)
+        orders_url = f"https://{shop_url}/admin/api/2024-01/orders.json?query={search_query}&status=any&limit=1"
+        
+        try:
+            response = requests.get(orders_url, headers=headers)
+            response.raise_for_status()
+            data = response.json()
+            
+            orders = data.get("orders", [])
+            if not orders:
+                return f"Nenhum pedido recente encontrado para o contato: {search_query}."
+                
+            order = orders[0]
+            name = order.get("name")
+            financial_status = order.get("financial_status", "pending")
+            fulfillment_status = order.get("fulfillment_status") or "unfulfilled"
+            
+            fulfillments = order.get("fulfillments", [])
+            tracking_info = ""
+            if fulfillments:
+                tracking_company = fulfillments[0].get("tracking_company", "Transportadora parceira")
+                tracking_number = fulfillments[0].get("tracking_number", "")
+                tracking_info = f"Transportadora: {tracking_company}. Cod. Rastreio: {tracking_number}."
+            else:
+                tracking_info = "Ainda não expedido pela transportadora J&T Express (em separação no centro logístico)."
+                
+            return (
+                f"Pedido Identificado: {name}\n"
+                f"Status do Pagamento: {financial_status}\n"
+                f"Status de Envio (Fulfillment): {fulfillment_status}\n"
+                f"Rastreamento: {tracking_info}"
+            )
+            
+        except Exception as e:
+            logger.error(f"Erro ao acessar Shopify Orders API: {str(e)}")
+            return f"Erro ao consultar pedidos da Shopify: {str(e)}"
