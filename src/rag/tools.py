@@ -1,6 +1,6 @@
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
-from typing import Type
+from typing import Type, Any
 import logging
 from src.rag.ingestion import ingestion_pipeline
 # from src.database import get_db_session
@@ -8,7 +8,7 @@ from src.rag.ingestion import ingestion_pipeline
 logger = logging.getLogger(__name__)
 
 class SearchCatalogInput(BaseModel):
-    query: str = Field(..., description="O produto que deseja buscar no catálogo. Ex: 'Pincel chanfrado para unhas'")
+    query: Any = Field(..., description="O produto que deseja buscar no catálogo. Ex: 'Pincel chanfrado para unhas'")
 
 class SearchCatalogTool(BaseTool):
     name: str = "Pesquisar Produtos no Site"
@@ -18,11 +18,15 @@ class SearchCatalogTool(BaseTool):
     )
     args_schema: Type[BaseModel] = SearchCatalogInput
 
-    def _run(self, query: str) -> str:
+    def _run(self, query: Any) -> str:
+        # Se a IA enviar um dicionário JSON acidentalmente (ex: {'description': 'unhas'})
+        if isinstance(query, dict):
+            query = query.get('description', str(query))
+            
         logger.info(f"🔎 [SearchCatalogTool] Agente pesquisando por: '{query}'")
         
         # 1. Transformar a 'query' em Embedding
-        vector_query = ingestion_pipeline.generate_embedding(query)
+        vector_query = ingestion_pipeline.generate_embedding(str(query))
         
         # 2. Busca Semântica no PostgreSQL (Mock por enquanto)
         # return session.query(ProductKnowledge).order_by(ProductKnowledge.embedding.cosine_distance(vector_query)).limit(3).all()
