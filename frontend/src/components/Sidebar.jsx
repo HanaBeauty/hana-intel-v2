@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Activity, MailCheck, Settings, Home } from 'lucide-react';
+import { Activity, MailCheck, Settings, Home, BrainCircuit } from 'lucide-react';
 
 export default function Sidebar() {
   const routes = [
     { path: '/control-tower', label: 'Torre de Controle', icon: <Activity size={20} /> },
     { path: '/radar', label: 'Radar 360', icon: <Activity size={20} /> },
     { path: '/review-board', label: 'Aprovador (CRM)', icon: <MailCheck size={20} /> },
+    { path: '/nurture-hub', label: 'Nurture Hub', icon: <BrainCircuit size={20} /> },
     { path: '/strategy-room', label: 'Strategy Room', icon: <Home size={20} /> },
     { path: '/settings', label: 'Configurações', icon: <Settings size={20} /> }
   ];

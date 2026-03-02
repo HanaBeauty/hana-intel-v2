@@ -5,6 +5,7 @@ import ReviewBoard from './pages/ReviewBoard';
 import ControlTower from './pages/ControlTower';
 import StrategyRoom from './pages/StrategyRoom';
 import Settings from './pages/Settings';
+import NurtureHub from './pages/NurtureHub';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <Route path="review-board" element={<ReviewBoard />} />
           <Route path="strategy-room" element={<StrategyRoom />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="nurture-hub" element={<NurtureHub />} />
         </Route>
       </Routes>
     </Router>

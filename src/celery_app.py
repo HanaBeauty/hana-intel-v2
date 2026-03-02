@@ -7,7 +7,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 celery_app = Celery(
     "hana_v2_worker",
     broker=REDIS_URL,
-    include=["src.workers.hunter_task", "src.workers.campaign_tasks"]
+    include=["src.workers.hunter_task", "src.workers.campaign_tasks", "src.workers.nurture_task"]
 )
 
 # Configurações otimizadas para tarefas de IA (Long-running)
@@ -29,5 +29,10 @@ celery_app.conf.beat_schedule = {
     "hunt-opportunities-daily-morning": {
         "task": "tasks.opportunity_hunter",
         "schedule": crontab(hour=8, minute=0),
+    },
+    # O Nutricionista de Base roda a cada 2 dias às 18h
+    "nurture-base-every-two-days": {
+        "task": "tasks.nurture_hub_generator",
+        "schedule": crontab(hour=18, minute=0, day_of_week="1,3,5"),
     }
 }
