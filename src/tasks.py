@@ -156,7 +156,8 @@ def process_evolution_webhook_task(self, payload: dict):
             r.ltrim(history_key, -10, -1)
             return {"status": "ignored", "reason": "human_handoff_active_silence"}
 
-        logger.info(f"📱 Nova mensagem WhatsApp de {remote_jid}: {texto_msg}")
+        instance_name = payload.get("instance", "Hana_Intel_PRO")
+        logger.info(f"📱 [WhatsApp Incoming] de {remote_jid} (Instância: {instance_name}): {texto_msg}")
         
         # 3. Lógica de Memória Conversacional
         history_key = f"chat_history:{number}"
@@ -175,10 +176,10 @@ def process_evolution_webhook_task(self, payload: dict):
             "historico": historico_formatado
         }
         
-        logger.info("🧠 Disparando Agente RAG para analisar a mensagem contextualizada...")
+        logger.info(f"🧠 [IA Thinking] Analisando mensagem de {number}...")
         resposta = crew_social_media.process_social_comment(wa_context)
         
-        logger.info(f"✅ [Celery Worker] Resposta do Agente Gerada:\n{resposta}")
+        logger.info(f"✅ [IA Responded] Resposta gerada para {number}")
         
         # Assim que a IA responde, gravamos a resposta dela no histórico do Redis
         r.rpush(history_key, f"[Hana IA]: {resposta}")
@@ -186,11 +187,13 @@ def process_evolution_webhook_task(self, payload: dict):
         
         # Enviar a resposta de volta via Evolution API
         try:
-            # A instância vem no payload (ex: "Hana_Intel_PRO")
-            instance_name = payload.get("instance", "Hana_Intel_PRO")
-            evo_url = os.getenv("EVOLUTION_API_URL", "https://webhook.adsai.com.br")
-            evo_token = os.getenv("EVOLUTION_API_TOKEN", "")
+            evo_url = os.getenv("EVOLUTION_API_URL")
+            evo_token = os.getenv("EVOLUTION_API_TOKEN")
             
+            if not evo_url or not evo_token:
+                logger.error("❌ [Config Error] EVOLUTION_API_URL ou TOKEN não definidos no .env!")
+                return {"status": "error", "reason": "missing_config"}
+
             send_url = f"{evo_url.rstrip('/')}/message/sendText/{instance_name}"
             headers = {
                 "apikey": evo_token,
@@ -201,18 +204,18 @@ def process_evolution_webhook_task(self, payload: dict):
                 "text": resposta
             }
             
-            logger.info(f"📤 Enviando resposta para {send_url} (Destino: {number})")
+            logger.info(f"📤 [WhatsApp Sending] para {number} via {instance_name}...")
             resp = requests.post(send_url, json=body, headers=headers, timeout=15)
             
             if resp.status_code in (200, 201):
-                logger.info("✅ Mensagem enviada com sucesso pela Evolution API!")
+                logger.info(f"✅ [WhatsApp Success] Resposta enviada para {number}")
             else:
-                logger.error(f"❌ Erro ao enviar para Evolution. Status: {resp.status_code}, Body: {resp.text}")
+                logger.error(f"❌ [WhatsApp Error] Falha Evolution API. Status: {resp.status_code}, Body: {resp.text}")
                 
         except Exception as e:
-            logger.error(f"❌ Falha crítica ao tentar disparar webhook de resposta: {e}")
+            logger.error(f"❌ [WhatsApp Critical] Falha ao disparar resposta: {e}")
         
-        return {"status": "success", "event": event_type, "agent_response": resposta, "remote_jid": remote_jid}
+        return {"status": "success", "event": event_type, "remote_jid": remote_jid}
         
     else:
         logger.warning(f"⚠️ Evento Evolution ignorado ou não tratado: {event_type}")

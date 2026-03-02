@@ -14,32 +14,37 @@ async def run_nurture_logic():
     
     async with async_session_maker() as db:
         
-        # Sorteia uma linha editorial
-        linhas_editoriais = [
-            ("Técnica: Umidade e Retenção", "Dê uma dica sobre como a umidade afeta o Adesivo Etil, e sugira o uso pontual de higienizador. Tom: Especialista e prestativo."),
-            ("Gestão: Precificação de Serviços", "Escreva um post inspiracional dizendo para a Lash Designer não brigar por preço, e sim vender a durabilidade do alongamento (retenção) como diferencial. Tom: Empoderamento e Posicionamento Premium."),
-            ("Oferta Oculta: Kit Completo", "Fale sobre a importância de usar a linha inteira (Adesivo + Preparador + Removedor) da mesma marca (Hana Beauty) para não dar reação química, e chame para ver o catálogo.")
-        ]
-        
+        # Sorteia o canal (WhatsApp ou Email)
+        canal_sorteado = random.choice(["whatsapp", "email"])
         tema_sorteado, instrucao = random.choice(linhas_editoriais)
         
         contexto = (
             f"Sua missão é gerar um conteúdo de NUTRIÇÃO para a comunidade de Lash Designers Ouro da Hana Beauty.\n"
             f"Linha Editorial Sorteada: {tema_sorteado}\n"
+            f"Canal de Destino: {canal_sorteado.upper()}\n"
             f"Instrução: {instrucao}\n\n"
-            f"Escreva diretamente o texto pronto para ser enviado no WHATSAPP VIP.\n"
-            f"Use Emojis elegantes (✨, 🤍, 🏆) e evite exageros. Seja direta, não pareça um robô."
         )
         
+        if canal_sorteado == "whatsapp":
+            contexto += (
+                "Escreva diretamente o texto pronto para ser enviado no WHATSAPP VIP.\n"
+                "Use Emojis elegantes (✨, 🤍, 🏆) e evite exageros. Seja direta, não pareça um robô."
+            )
+        else:
+            contexto += (
+                "Escreva um E-MAIL PREMIUM. Você DEVE seguir o layout 'PREMIUM GOLD TEMPLATE'.\n"
+                "Garanta que o HTML retornado seja válido e luxuoso."
+            )
+        
         try:
-            logger.info(f"Enviando para o CrewAI (Content Lab) - Tema de Nutrição: {tema_sorteado}")
+            logger.info(f"Enviando para o CrewAI (Content Lab) - Tema: {tema_sorteado} | Canal: {canal_sorteado}")
             # Envia para a thread pool do agent para não bloquear o event loop do celery
-            copy_gerada = await asyncio.to_thread(crew_content_lab.process_campaign, contexto, "Dica de WhatsApp / Pílula de Conhecimento")
+            copy_gerada = await asyncio.to_thread(crew_content_lab.process_campaign, contexto, canal_sorteado)
             
             nova_nutricao = Campaign(
-                title=f"[Nurture Hub] Dica do Dia: {tema_sorteado}",
+                title=f"[Nurture Hub] {canal_sorteado.capitalize()}: {tema_sorteado}",
                 intent="Nurture (Nutrição de Base)",
-                channel="whatsapp",
+                channel=canal_sorteado,
                 target_audience="Clientes Opt-In VIP (Tag: Ouro)",
                 generated_content=copy_gerada,
                 status=CampaignStatus.draft
@@ -48,7 +53,7 @@ async def run_nurture_logic():
             db.add(nova_nutricao)
             await db.commit()
             
-            logger.info(f"✅ Nurture Hub: Pílula de conhecimento gerada com sucesso e enviada ao deck de aprovação!")
+            logger.info(f"✅ Nurture Hub: Conteúdo ({canal_sorteado}) gerado e enviado ao deck de aprovação!")
             
         except Exception as e:
             logger.error(f"Erro ao gerar conteúdo de Nurture: {e}")

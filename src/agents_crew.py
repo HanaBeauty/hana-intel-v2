@@ -47,14 +47,42 @@ class ContentLabCrew:
         
         agents = self._create_agents()
         
+        # Template HTML mestre para e-mails luxuosos
+        PREMIUM_GOLD_TEMPLATE = """<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=Outfit:wght@300;400;600&display=swap');
+        body { font-family: 'Inter', Arial, sans-serif; background-color: #FAFAFA; margin: 0; padding: 0; color: #222222; }
+        .container { max-width: 600px; margin: 0 auto; background-color: #FFFFFF; overflow: hidden; border: 1px solid #EAEAEA; }
+        .header { padding: 35px 20px; text-align: center; } .logo { width: 170px; }
+        .hero { background: #111111; padding: 55px 25px; text-align: center; color: #FFFFFF; }
+        .hero h1 { font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 400; text-transform: uppercase; letter-spacing: 1.5px; }
+        .content-box { padding: 45px 35px; line-height: 1.8; font-size: 15px; color: #444444; text-align: justify; }
+        .btn-action { background: #111111; color: #FFFFFF !important; padding: 16px 35px; text-decoration: none; font-weight: 600; display: inline-block; font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><img src="https://www.hanabeauty.com.br/cdn/shop/files/Logotipo-Hanabeauty1.png?v=1690976695&width=300" alt="Hana Beauty" class="logo"></div>
+        <div class="hero"><h1>{{TITULO}}</h1></div>
+        <div class="content-box">{{TEXTO_PRINCIPAL}}<br><br><center><a href="{{LINK}}" class="btn-action">{{CTA_LABEL}}</a></center></div>
+        <div style="background: #FAFAFA; padding: 30px; text-align: center; font-size: 11px; color: #999999;">© 2026 Hana Beauty. Todos os direitos reservados.</div>
+    </div>
+</body>
+</html>"""
+
         redacao_task = Task(
             description=(
                 f'Escreva 3 VARIANTES DISTINTAS (A, B e C) de um(a) {content_type} focado na seguinte estratégia: {strategy_directive}. '
                 'Cada variante deve ter um Gancho (Hook) e Tom de Voz levemente diferente, mas sempre respeitando o DNA Premium da Hana Beauty. '
-                'Formate a saída como um bloco de texto claro, separando cada variante por "--- VARIANTE X ---". '
-                'Se for e-mail, as variantes devem conter o HTML completo.'
+                'SE O CANAL FOR EMAIL: Você DEVE retornar o HTML COMPLETO baseando-se NESTE TEMPLATE:\n'
+                f'{PREMIUM_GOLD_TEMPLATE}\n'
+                'Substitua {{TITULO}}, {{TEXTO_PRINCIPAL}}, {{LINK}} e {{CTA_LABEL}} pelo conteúdo gerado. '
+                'Formate a saída como um bloco de texto claro, separando cada variante por "--- VARIANTE X ---".'
             ),
-            expected_output=f'Um bloco de texto contendo as 3 variantes (A, B e C) para o(a) {content_type}, polidas e separadas claramente.',
+            expected_output=f'Um bloco de texto contendo as 3 variantes (A, B e C) para o(a) {content_type}, polidas e separadas claramente. Se for e-mail, deve conter o HTML completo.',
             agent=agents[0]
         )
 

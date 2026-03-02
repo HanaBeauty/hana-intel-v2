@@ -348,6 +348,22 @@ async def get_contacts_list(
 
 
 # --- Torre de Controle (Telemetria) ---
+# --- Debug & Gatilhos Manuais ---
+
+from src.workers.hunter_task import opportunity_hunter_task
+from src.workers.nurture_task import nurture_hub_task
+
+@router.post("/debug/trigger-tasks")
+async def trigger_background_tasks():
+    """Gatilho manual para popular o Review Board e Nurture Hub instantaneamente."""
+    try:
+        # Dispara as duas principais tarefas de geração de conteúdo
+        opportunity_hunter_task.delay()
+        nurture_hub_task.delay()
+        return {"status": "success", "message": "Tarefas de caça e nutrição disparadas."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @router.get("/telemetry")
 async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):
     """Retorna dados consolidados para a Torre de Controle (DB, Redis, Métricas)"""
@@ -361,13 +377,10 @@ async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):
     except Exception:
         db_health = "offline"
         
-    # 2. Performance (Simplificado por agora, pode ler do DB de logs no futuro)
-    # Contabiliza quantos clientes ativos temos no Redis (Leads Mapeados)
+    # 2. Performance
     active_leads_keys = r.keys("chat_history:*")
     active_leads_count = len(active_leads_keys)
     
-    # Historico (Pega do Redis ou mock para logs rápidos)
-    # A implementação ideal fará um LTRIM de uma chave 'system_logs' que o Celery vai popular
     logs = [
         {"time": "Agora", "origin": "system", "action": "TELEMETRY_SYNC", "dest": "Dashboard"}
     ]
@@ -376,16 +389,16 @@ async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):
         "health": {
             "redis": redis_health,
             "db": db_health,
-            "whatsapp": "online" # Presumido online para v2 direct via Evolution webhook
+            "whatsapp": "online"
         },
         "performance": {
-            "messages_today": active_leads_count * 2, # Simulando volume vs leads
+            "messages_today": active_leads_count * 2,
             "campaigns_active": 0,
             "bounces": 0
         },
         "crm": {
             "active_leads": active_leads_count,
-            "ltv": "Calculando..." # A integrar com Shopify no futuro
+            "ltv": "Calculando..."
         },
         "logs": logs
     }
