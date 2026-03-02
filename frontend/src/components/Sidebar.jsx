@@ -6,8 +6,8 @@ export default function Sidebar() {
     { path: '/control-tower', label: 'Torre de Controle', icon: <Activity size={20} /> },
     { path: '/radar', label: 'Radar 360', icon: <Activity size={20} /> },
     { path: '/review-board', label: 'Aprovador (CRM)', icon: <MailCheck size={20} /> },
-    { path: '#', label: 'Strategy Room', icon: <Home size={20} /> },
-    { path: '#', label: 'Configurações', icon: <Settings size={20} /> }
+    { path: '/strategy-room', label: 'Strategy Room', icon: <Home size={20} /> },
+    { path: '/settings', label: 'Configurações', icon: <Settings size={20} /> }
   ];
 
   return (

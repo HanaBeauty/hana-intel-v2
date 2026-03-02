@@ -3,6 +3,8 @@ import Layout from './components/Layout';
 import Radar from './pages/Radar';
 import ReviewBoard from './pages/ReviewBoard';
 import ControlTower from './pages/ControlTower';
+import StrategyRoom from './pages/StrategyRoom';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -13,6 +15,8 @@ function App() {
           <Route path="control-tower" element={<ControlTower />} />
           <Route path="radar" element={<Radar />} />
           <Route path="review-board" element={<ReviewBoard />} />
+          <Route path="strategy-room" element={<StrategyRoom />} />
+          <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>
     </Router>
