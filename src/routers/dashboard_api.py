@@ -255,23 +255,31 @@ async def get_contacts_list(db: AsyncSession = Depends(get_db_session)):
     Retorna a lista mestre (CRM) de todos os contatos captados.
     Ordenados pelas interações mais recentes.
     """
-    query = select(Contact).order_by(Contact.last_interaction.desc()).limit(300)
-    result = await db.execute(query)
-    contacts = result.scalars().all()
-    
-    return [
-        {
-            "id": c.id,
-            "name": c.name or "Lead Sem Nome",
-            "phone": c.phone,
-            "email": c.email,
-            "total_spent": c.total_spent,
-            "last_interaction": c.last_interaction,
-            "status": c.status,
-            "tags": c.tags
-        }
-        for c in contacts
-    ]
+    try:
+        query = select(Contact).order_by(Contact.last_interaction.desc()).limit(300)
+        result = await db.execute(query)
+        contacts = result.scalars().all()
+        
+        return [
+            {
+                "id": str(c.id),
+                "name": str(c.name) if c.name else "Lead Sem Nome",
+                "phone": str(c.phone) if c.phone else "",
+                "email": str(c.email) if c.email else "",
+                "total_spent": str(c.total_spent) if c.total_spent else "0.0",
+                "last_interaction": c.last_interaction.isoformat() if c.last_interaction else None,
+                "status": str(c.status) if c.status else "lead",
+                "tags": str(c.tags) if c.tags else ""
+            }
+            for c in contacts
+        ]
+    except Exception as e:
+        import traceback
+        error_msg = traceback.format_exc()
+        # Retorna 500 mas com os detalhes completos do crash!
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=500, content={"error": str(e), "traceback": error_msg})
+
 
 # --- Torre de Controle (Telemetria) ---
 @router.get("/telemetry")
