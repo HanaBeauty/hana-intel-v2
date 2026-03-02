@@ -63,10 +63,14 @@ export default function Radar() {
   };
 
   useEffect(() => {
-    fetchChats();
-    const interval = setInterval(fetchChats, 5000); // Polling 5s
-    return () => clearInterval(interval);
-  }, []);
+    if (activeTab === 'live') {
+      fetchChats();
+      const interval = setInterval(fetchChats, 5000); // Polling 5s
+      return () => clearInterval(interval);
+    } else if (activeTab === 'contacts') {
+      fetchContacts();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
     if (selectedChat) {
