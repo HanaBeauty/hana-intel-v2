@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("CSVImport")
 
 # Configuração de Caminho do CSV (Pode ser passado via argumento)
-DEFAULT_CSV_NAME = "shopify_customers_export_26-02-2026.csv"
+DEFAULT_CSV_NAME = "scripts/shopify_customers_export_26-02-2026.csv"
 # Busca na raiz do projeto ou na pasta scripts
 CSV_PATH = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CSV_NAME
 
