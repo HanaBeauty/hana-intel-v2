@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Search, Send, ShieldAlert, Bot, User, CheckCircle2, ChevronRight, Archive, ArrowRightLeft, MessageSquare } from 'lucide-react';
+import { Search, Send, ShieldAlert, Bot, User, CheckCircle2, ChevronRight, Archive, ArrowRightLeft, MessageSquare, Users, MessageCircle } from 'lucide-react';
 
 export default function Radar() {
   const [activeChats, setActiveChats] = useState([]);
@@ -8,6 +8,10 @@ export default function Radar() {
   const [leadProfile, setLeadProfile] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
+
+  // Novos States para o CRM
+  const [activeTab, setActiveTab] = useState('live'); // 'live' ou 'contacts'
+  const [contactList, setContactList] = useState([]);
 
   const fetchChats = async () => {
     try {
@@ -43,6 +47,18 @@ export default function Radar() {
       }
     } catch (err) {
       console.error('Erro ao buscar perfil CRM:', err);
+    }
+  };
+
+  const fetchContacts = async () => {
+    try {
+      const res = await fetch('/api/v1/dashboard/contacts/list');
+      if (res.ok) {
+        const data = await res.json();
+        setContactList(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar lista de contatos:', err);
     }
   };
 
@@ -94,154 +110,265 @@ export default function Radar() {
   };
 
   return (
-    <div className="radar-master-detail animate-fade-in">
-
-      {/* COLUNA 1: Lista de Conversas */}
-      <div className="radar-col-list">
-        <div className="col-header">
-          <h2>Conversas Ativas</h2>
-          <div className="search-bar">
-            <Search size={16} />
-            <input type="text" placeholder="Buscar cliente..." />
-          </div>
+    <div className="radar-layout">
+      {/* HEADER LOCAL (CHAVEADOR) */}
+      <div className="radar-toggle-header">
+        <div className="radar-title-area">
+          <h1>Radar 360º</h1>
+          <span className="subtitle">Visualização Mestre da Torre de Controle</span>
         </div>
 
-        <div className="chat-list">
-          {activeChats.map(chat => (
-            <div
-              key={chat.id}
-              className={`chat-list-item ${selectedChat?.id === chat.id ? 'selected' : ''}`}
-              onClick={() => setSelectedChat(chat)}
-            >
-              <div className="avatar"><User size={20} /></div>
-              <div className="chat-summary">
-                <div className="chat-top">
-                  <span className="chat-name">{chat.name}</span>
-                  <span className="chat-time">AGORA</span>
-                </div>
-                <div className="chat-bottom">
-                  <span className="chat-preview">{chat.lastMsg}</span>
-                  {chat.status === 'bot_active' ? (
-                    <Bot size={14} className="status-icon active" />
-                  ) : (
-                    <ShieldAlert size={14} className="status-icon paused" />
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="radar-tabs">
+          <button
+            className={`radar-tab ${activeTab === 'live' ? 'active' : ''}`}
+            onClick={() => setActiveTab('live')}
+          >
+            <MessageCircle size={18} /> Live Chat
+          </button>
+          <button
+            className={`radar-tab ${activeTab === 'contacts' ? 'active' : ''}`}
+            onClick={() => setActiveTab('contacts')}
+          >
+            <Users size={18} /> Base de Contatos
+          </button>
         </div>
       </div>
 
-      {/* COLUNA 2: O Palco (Histórico do Chat) */}
-      <div className="radar-col-chat glass-panel">
-        {selectedChat ? (
+      <div className="radar-master-detail animate-fade-in">
+
+        {activeTab === 'live' ? (
           <>
-            <div className="chat-header-main">
-              <div className="chat-person-info">
-                <h3>Conversa com {selectedChat.name} ({selectedChat.id})</h3>
-                <span className={`status-pill ${selectedChat.status}`}>
-                  {selectedChat.status === 'bot_active' ? 'Ativo via Hana IA' : 'Pausado (Hand-off Humano)'}
-                </span>
+            {/* COLUNA 1: Lista de Conversas */}
+            <div className="radar-col-list">
+              <div className="col-header">
+                <h2>Conversas Ativas</h2>
+                <div className="search-bar">
+                  <Search size={16} />
+                  <input type="text" placeholder="Buscar cliente..." />
+                </div>
+              </div>
+
+              <div className="chat-list">
+                {activeChats.map(chat => (
+                  <div
+                    key={chat.id}
+                    className={`chat-list-item ${selectedChat?.id === chat.id ? 'selected' : ''}`}
+                    onClick={() => setSelectedChat(chat)}
+                  >
+                    <div className="avatar"><User size={20} /></div>
+                    <div className="chat-summary">
+                      <div className="chat-top">
+                        <span className="chat-name">{chat.name}</span>
+                        <span className="chat-time">AGORA</span>
+                      </div>
+                      <div className="chat-bottom">
+                        <span className="chat-preview">{chat.lastMsg}</span>
+                        {chat.status === 'bot_active' ? (
+                          <Bot size={14} className="status-icon active" />
+                        ) : (
+                          <ShieldAlert size={14} className="status-icon paused" />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="chat-history">
-              {chatHistory.map((msg, i) => (
-                <div key={i} className={`message-bubble-wrapper ${msg.sender}`}>
-                  <div className={`message-bubble ${msg.sender}`}>
-                    <span className="message-sender-name">
-                      {msg.sender === 'user' ? selectedChat.name : msg.sender === 'admin' ? 'Juliano Takimoto (Humano)' : 'Hana Intel (IA)'} • {msg.time}
-                    </span>
-                    <p>{msg.text}</p>
+            {/* COLUNA 2: O Palco (Histórico do Chat) */}
+            <div className="radar-col-chat glass-panel">
+              {selectedChat ? (
+                <>
+                  <div className="chat-header-main">
+                    <div className="chat-person-info">
+                      <h3>Conversa com {selectedChat.name} ({selectedChat.id})</h3>
+                      <span className={`status-pill ${selectedChat.status}`}>
+                        {selectedChat.status === 'bot_active' ? 'Ativo via Hana IA' : 'Pausado (Hand-off Humano)'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
 
-            <div className="chat-input-area">
-              <form onSubmit={handleSendMessage} className="chat-form">
-                <input
-                  type="text"
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Interceptar e digitar mensagem como atendente humano..."
-                  className="chat-input"
-                  title="Ao enviar, o modo Hand-off será ativado automaticamente."
-                />
-                <button type="submit" className="btn-send">
-                  <Send size={18} />
-                </button>
-              </form>
+                  <div className="chat-history">
+                    {chatHistory.map((msg, i) => (
+                      <div key={i} className={`message-bubble-wrapper ${msg.sender}`}>
+                        <div className={`message-bubble ${msg.sender}`}>
+                          <span className="message-sender-name">
+                            {msg.sender === 'user' ? selectedChat.name : msg.sender === 'admin' ? 'Juliano Takimoto (Humano)' : 'Hana Intel (IA)'} • {msg.time}
+                          </span>
+                          <p>{msg.text}</p>
+                        </div>
+                      </div>
+                    ))}
+                    <div ref={messagesEndRef} />
+                  </div>
+
+                  <div className="chat-input-area">
+                    <form onSubmit={handleSendMessage} className="chat-form">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        placeholder="Interceptar e digitar mensagem como atendente humano..."
+                        className="chat-input"
+                        title="Ao enviar, o modo Hand-off será ativado automaticamente."
+                      />
+                      <button type="submit" className="btn-send">
+                        <Send size={18} />
+                      </button>
+                    </form>
+                  </div>
+                </>
+              ) : (
+                <div className="empty-chat-state">
+                  <MessageSquare size={48} className="empty-icon" />
+                  <h3>Selecione uma conversa</h3>
+                  <p>Monitore a IA ou assuma o atendimento em tempo real.</p>
+                </div>
+              )}
             </div>
           </>
         ) : (
-          <div className="empty-chat-state">
-            <MessageSquare size={48} className="empty-icon" />
-            <h3>Selecione uma conversa</h3>
-            <p>Monitore a IA ou assuma o atendimento em tempo real.</p>
+          /* COLUNA UNIFICADA: CRM DATAGRID */
+          <div className="radar-col-datagrid glass-panel">
+            <div className="datagrid-header">
+              <h2>Gestão de Leads & Clientes ({contactList.length})</h2>
+              <div className="search-bar">
+                <Search size={16} />
+                <input type="text" placeholder="Buscar por nome, telefone ou status..." />
+              </div>
+            </div>
+
+            <div className="datagrid-table-wrapper">
+              <table className="crm-table">
+                <thead>
+                  <tr>
+                    <th>Cliente</th>
+                    <th>Telefone (ZAP)</th>
+                    <th>Ticket / LTV</th>
+                    <th>E-mail Principal</th>
+                    <th>Última Ação</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {contactList.map(contact => (
+                    <tr
+                      key={contact.id}
+                      className={`crm-row ${selectedChat?.id === contact.phone ? 'selected' : ''}`}
+                      onClick={() => setSelectedChat({ id: contact.phone, name: contact.name, status: contact.status === 'client' ? 'bot_active' : 'handoff', lastMsg: 'Visualização CRM' })}
+                    >
+                      <td>
+                        <div className="crm-name-cell">
+                          <div className="avatar micro"><User size={14} /></div>
+                          <strong>{contact.name || 'Desconhecido'}</strong>
+                        </div>
+                      </td>
+                      <td><span className="font-mono">{contact.phone}</span></td>
+                      <td><span className="ltv-value-green">R$ {contact.total_spent}</span></td>
+                      <td><span className="email-cell">{contact.email || '--'}</span></td>
+                      <td>{new Date(contact.last_interaction).toLocaleDateString('pt-BR')}</td>
+                      <td>
+                        <span className={`status-pill ${contact.status === 'client' ? 'client' : 'lead'}`}>
+                          {contact.status === 'client' ? 'Cliente Vip' : 'Lead Frio'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
-      </div>
 
-      {/* COLUNA 3: Perfil do Cliente & Ações */}
-      {selectedChat && (
-        <div className="radar-col-profile">
-          <div className="profile-card glass-panel">
-            <div className="profile-header">
-              <div className="profile-avatar-large"><User size={32} /></div>
-              <h2>{selectedChat.name}</h2>
-              {leadProfile ? (
-                <span className={`badge-tier ${leadProfile.badge_class}`}>Nível {leadProfile.tier}</span>
-              ) : (
-                <span className="badge-tier silver">Carregando CRM...</span>
-              )}
-            </div>
-
-            <div className="profile-section">
-              <h4>Ações Rápidas</h4>
-              <div className="action-grid">
-                <button className="btn-action"><Archive size={16} /> Resolver</button>
-                <button className="btn-action"><ArrowRightLeft size={16} /> Transferir</button>
-
-                {selectedChat.status === 'handoff' ? (
-                  <button className="btn-action highlight"><Bot size={16} /> Reativar IA</button>
+        {/* COLUNA 3: Perfil do Cliente & Ações */}
+        {selectedChat && (
+          <div className="radar-col-profile">
+            <div className="profile-card glass-panel">
+              <div className="profile-header">
+                <div className="profile-avatar-large"><User size={32} /></div>
+                <h2>{selectedChat.name}</h2>
+                {leadProfile ? (
+                  <span className={`badge-tier ${leadProfile.badge_class}`}>Nível {leadProfile.tier}</span>
                 ) : (
-                  <button className="btn-action warning"><ShieldAlert size={16} /> Parar IA</button>
+                  <span className="badge-tier silver">Carregando CRM...</span>
                 )}
-
               </div>
-            </div>
 
-            <div className="profile-section">
-              <h4>Performance CRM</h4>
-              <div className="crm-stats">
-                <div className="stat-box">
-                  <span className="stat-label">LTV Total</span>
-                  <span className="stat-value">{leadProfile ? leadProfile.total_spent_formatted : 'R$ --'}</span>
-                </div>
-                <div className="stat-box">
-                  <span className="stat-label">Pedidos</span>
-                  <span className="stat-value">{leadProfile ? leadProfile.orders_count : '-'}</span>
+              <div className="profile-section">
+                <h4>Ações Rápidas</h4>
+                <div className="action-grid">
+                  <button className="btn-action"><Archive size={16} /> Resolver</button>
+                  <button className="btn-action"><ArrowRightLeft size={16} /> Transferir</button>
+
+                  {selectedChat.status === 'handoff' ? (
+                    <button className="btn-action highlight"><Bot size={16} /> Reativar IA</button>
+                  ) : (
+                    <button className="btn-action warning"><ShieldAlert size={16} /> Parar IA</button>
+                  )}
+
                 </div>
               </div>
-            </div>
 
-            <div className="profile-section">
-              <h4>Canal Principal</h4>
-              <p className="contact-info">+{selectedChat.id}</p>
+              <div className="profile-section">
+                <h4>Performance CRM</h4>
+                <div className="crm-stats">
+                  <div className="stat-box">
+                    <span className="stat-label">LTV Total</span>
+                    <span className="stat-value">{leadProfile ? leadProfile.total_spent_formatted : 'R$ --'}</span>
+                  </div>
+                  <div className="stat-box">
+                    <span className="stat-label">Pedidos</span>
+                    <span className="stat-value">{leadProfile ? leadProfile.orders_count : '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="profile-section">
+                <h4>Canal Principal</h4>
+                <p className="contact-info">+{selectedChat.id}</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      <style>{`
+        <style>{`
+        .radar-layout {
+          display: flex;
+          flex-direction: column;
+          height: calc(100vh - 80px); /* Ajuste basado no header global */
+          margin: -20px;
+        }
+
+        .radar-toggle-header {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 15px 24px;
+          background: rgba(0,0,0,0.4);
+          border-bottom: 1px solid var(--color-border);
+        }
+
+        .radar-title-area h1 { margin: 0; font-size: 1.3rem; color: var(--color-primary); font-weight: 300; }
+        .radar-title-area .subtitle { font-size: 0.8rem; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 1px; }
+
+        .radar-tabs {
+          display: flex; gap: 8px;
+          background: rgba(255,255,255,0.05); padding: 4px; border-radius: 8px; border: 1px solid var(--color-border);
+        }
+
+        .radar-tab {
+          display: flex; align-items: center; gap: 8px;
+          background: transparent; color: var(--color-text-secondary); border: none;
+          padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 0.9rem;
+          cursor: pointer; transition: 0.3s;
+        }
+        .radar-tab:hover { color: white; background: rgba(255,255,255,0.05); }
+        .radar-tab.active { background: rgba(212, 175, 55, 0.15); color: var(--color-primary); border: 1px solid rgba(212, 175, 55, 0.3); }
+
         .radar-master-detail {
           display: flex;
-          height: calc(100vh - 80px); /* Ajuste basado no header global se houver, ou 100vh */
+          flex: 1;
+          min-height: 0;
           gap: 20px;
-          margin: -20px; /* Para vazar as bordas do container padrão */
+          padding: 20px;
         }
 
         /* Coluna 1: Lista */
@@ -251,6 +378,8 @@ export default function Radar() {
           display: flex;
           flex-direction: column;
           background: rgba(0,0,0,0.2);
+          border-radius: 12px;
+          overflow: hidden;
         }
 
         .col-header {
@@ -451,7 +580,56 @@ export default function Radar() {
         .stat-box .stat-value { font-size: 1.1rem; font-weight: 600; color: var(--color-primary); }
 
         .contact-info { font-size: 0.9rem; font-family: monospace; }
+
+        /* Datagrid CRM View */
+        .radar-col-datagrid {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          border-radius: 12px;
+          overflow: hidden;
+          background: rgba(0,0,0,0.4);
+        }
+
+        .datagrid-header {
+          display: flex; justify-content: space-between; align-items: center;
+          padding: 20px; border-bottom: 1px solid var(--color-border);
+        }
+        .datagrid-header h2 { margin: 0; font-size: 1.2rem; font-weight: 400; color: white; }
+
+        .datagrid-table-wrapper {
+          flex: 1; overflow: auto; padding: 0;
+        }
+
+        .crm-table {
+          width: 100%; border-collapse: collapse; text-align: left;
+        }
+        .crm-table th {
+          position: sticky; top: 0; background: rgba(10,10,10,0.95); z-index: 10;
+          padding: 16px 20px; font-size: 0.75rem; text-transform: uppercase; color: var(--color-text-secondary);
+          border-bottom: 1px solid var(--color-border);
+        }
+        .crm-table td {
+          padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.02);
+          font-size: 0.9rem; color: #e2e8f0;
+        }
+        
+        .crm-row { cursor: pointer; transition: 0.2s; }
+        .crm-row:hover { background: rgba(255,255,255,0.03); }
+        .crm-row.selected { background: rgba(212, 175, 55, 0.08); }
+
+        .crm-name-cell { display: flex; align-items: center; gap: 10px; }
+        .avatar.micro { width: 24px; height: 24px; background: rgba(255,255,255,0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--color-primary); }
+
+        .font-mono { font-family: monospace; font-size: 0.85rem; color: #9ca3af; }
+        .ltv-value-green { color: var(--color-success); font-weight: 600; }
+        .email-cell { color: #9ca3af; font-size: 0.85rem; }
+
+        .status-pill.client { background: rgba(212, 175, 55, 0.1); color: var(--color-primary); border: 1px solid rgba(212, 175, 55, 0.3); }
+        .status-pill.lead { background: rgba(100, 100, 100, 0.2); color: #9ca3af; border: 1px solid rgba(100, 100, 100, 0.4); }
+
       `}</style>
+      </div>
     </div>
   );
 }

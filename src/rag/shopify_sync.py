@@ -117,3 +117,84 @@ class ShopifyKnowledgeSync:
                 logger.error(f"❌ Erro fatal ao gravar no banco vetorial: {e}")
 
 shopify_sync_service = ShopifyKnowledgeSync()
+
+class ShopifyCustomerSync:
+    """
+    Integração de Extração de Clientes Shopify (CRM) para o Banco Contact.
+    Cruza o Telefone do Checkout com os Logs do WhatsApp.
+    """
+    def __init__(self):
+        self.store_url = os.getenv("SHOPIFY_STORE_URL")
+        self.access_token = os.getenv("SHOPIFY_ACCESS_TOKEN")
+        self.api_version = "2024-01"
+        if self.store_url:
+            self.base_url = f"https://{self.store_url}/admin/api/{self.api_version}"
+        else:
+            self.base_url = None
+
+    async def run_sync_job(self):
+        from src.models import Contact
+        import datetime
+        import httpx
+        
+        logger.info("🔄 Iniciando rotina de Sincronização Shopify Clientes -> CRM Contacts...")
+        if not async_session_maker or not self.base_url:
+            logger.error("❌ Credenciais Shopify ausentes para sync de Clientes.")
+            return
+
+        url = f"{self.base_url}/customers.json?limit=250"
+        headers = {
+            "X-Shopify-Access-Token": self.access_token,
+            "Content-Type": "application/json"
+        }
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.get(url, headers=headers, timeout=30.0)
+                response.raise_for_status()
+                customers = response.json().get("customers", [])
+                
+                async with async_session_maker() as session:
+                    for cust in customers:
+                        phone = cust.get("phone") or cust.get("default_address", {}).get("phone")
+                        if not phone:
+                            continue
+                        
+                        # Limpar telefone pra formato WhatsApp Brasileiro
+                        phone_clean = ''.join(filter(str.isdigit, str(phone)))
+                        if len(phone_clean) in (10, 11):
+                            phone_clean = f"55{phone_clean}"
+                            
+                        query = select(Contact).where(Contact.phone == phone_clean)
+                        result = await session.execute(query)
+                        existing_contact = result.scalars().first()
+                        
+                        nome = f"{cust.get('first_name', '')} {cust.get('last_name', '')}".strip()
+                        email = cust.get("email")
+                        total_spent = str(cust.get("total_spent", "0.0"))
+                        
+                        if existing_contact:
+                            # Preservar o nome do WhatsApp se o Shopify estiver vazio, caso contrario, sobrescrever
+                            if nome:
+                                existing_contact.name = nome
+                            existing_contact.email = email
+                            existing_contact.total_spent = total_spent
+                            existing_contact.status = "client"
+                        else:
+                            novo_contact = Contact(
+                                id=phone_clean,
+                                name=nome or f"Cliente Shopify {cust['id']}",
+                                phone=phone_clean,
+                                email=email,
+                                total_spent=total_spent,
+                                last_interaction=datetime.datetime.utcnow(),
+                                status="client"
+                            )
+                            session.add(novo_contact)
+                            
+                    await session.commit()
+                logger.info(f"🎉 Sincronização Shopify CRM concluída (Processados {len(customers)} clientes).")
+            except Exception as e:
+                logger.error(f"❌ Erro na Sincronização Shopify Clientes: {e}")
+
+shopify_customer_sync_service = ShopifyCustomerSync()

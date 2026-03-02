@@ -246,6 +246,33 @@ async def send_admin_message(remoteJid: str, payload: AdminMessageRequest):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Falha ao enviar mensagem: {str(e)}")
 
+# --- Base de Contatos Estratégica ---
+from src.models import Contact
+
+@router.get("/contacts/list")
+async def get_contacts_list(db: AsyncSession = Depends(get_db_session)):
+    """
+    Retorna a lista mestre (CRM) de todos os contatos captados.
+    Ordenados pelas interações mais recentes.
+    """
+    query = select(Contact).order_by(Contact.last_interaction.desc()).limit(300)
+    result = await db.execute(query)
+    contacts = result.scalars().all()
+    
+    return [
+        {
+            "id": c.id,
+            "name": c.name or "Lead Sem Nome",
+            "phone": c.phone,
+            "email": c.email,
+            "total_spent": c.total_spent,
+            "last_interaction": c.last_interaction,
+            "status": c.status,
+            "tags": c.tags
+        }
+        for c in contacts
+    ]
+
 # --- Torre de Controle (Telemetria) ---
 @router.get("/telemetry")
 async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):

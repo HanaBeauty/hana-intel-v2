@@ -70,6 +70,35 @@ def process_evolution_webhook_task(self, payload: dict):
         if not texto_msg and isinstance(message_info.get("extendedTextMessage"), dict):
             texto_msg = message_info["extendedTextMessage"].get("text", "")
 
+        # 0. Registrar / Atualizar Lead no CRM Permanente (Tabela Contact)
+        try:
+            from src.database import sync_session_maker
+            from src.models import Contact
+            import datetime
+            if sync_session_maker:
+                with sync_session_maker() as session:
+                    lead = session.query(Contact).filter(Contact.phone == number).first()
+                    # pushName às vezes vem na chave, podemos tentar pegar mas focamos no número
+                    contact_name = payload.get("data", {}).get("pushName", f"Lead {number[-4:]}")
+
+                    if lead:
+                        lead.last_interaction = datetime.datetime.utcnow()
+                        if contact_name and lead.name and "Lead" in lead.name:
+                            lead.name = contact_name
+                    else:
+                        novo_lead = Contact(
+                            id=number,
+                            name=contact_name,
+                            phone=number,
+                            last_interaction=datetime.datetime.utcnow(),
+                            status="lead"
+                        )
+                        session.add(novo_lead)
+                    session.commit()
+                    logger.info(f"💾 [CRM Contact] Lead {number} atualizado com sucesso no PostgreSQL.")
+        except Exception as e:
+            logger.error(f"❌ Erro ao sincronizar Contato no PostgreSQL via Celery: {e}")
+
         # 1. Lógica de Intervenção Humana (Handoff)
         handoff_key = f"human_handoff:{number}"
         if key.get("fromMe") is True:

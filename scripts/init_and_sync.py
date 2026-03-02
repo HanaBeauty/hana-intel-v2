@@ -7,7 +7,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.database import engine, Base
-from src.rag.shopify_sync import shopify_sync_service
+from src.rag.shopify_sync import shopify_sync_service, shopify_customer_sync_service
 from sqlalchemy import text
 
 logging.basicConfig(level=logging.INFO)
@@ -27,8 +27,11 @@ async def run():
     
     logger.info("✅ Tabelas e Extensão criadas.")
     
-    logger.info("🚀 Iniciando Sincronização com Shopify...")
+    logger.info("🚀 Iniciando Sincronização com Shopify (Produtos / VectorDB)...")
     await shopify_sync_service.run_sync_job()
+    
+    logger.info("👥 Iniciando Sincronização Shopify Clientes (CRM / Contacts)...")
+    await shopify_customer_sync_service.run_sync_job()
 
 if __name__ == "__main__":
     asyncio.run(run())

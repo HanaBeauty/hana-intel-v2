@@ -83,3 +83,24 @@ class CampaignDelivery(Base):
     error_message = Column(Text, nullable=True)
     
     sent_at = Column(DateTime, default=datetime.datetime.utcnow)
+
+class Contact(Base):
+    """
+    Tabela espelho do CRM para centralização de Clientes Shopify e Leads do Zap.
+    Utilizada na Visão Estratégica do Radar 360.
+    """
+    __tablename__ = "contacts"
+    
+    id = Column(String, primary_key=True, index=True) # remoteJid do zap ou ID do Shopify
+    name = Column(String, nullable=True)
+    phone = Column(String, unique=True, index=True, nullable=True)
+    email = Column(String, nullable=True)
+    
+    total_spent = Column(String, default="0.0") # Em String pra evitar float loss ou Float (usaremos txt simples)
+    last_interaction = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    tags = Column(String, nullable=True) # Tags de interesse em JSON (Ex: ["Lash", "Volume"])
+    status = Column(String, default="lead") # lead, client, churn
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
