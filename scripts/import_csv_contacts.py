@@ -16,7 +16,9 @@ from src.models import Contact
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger("CSVImport")
 
-CSV_PATH = "/Users/takimotojuliano/.gemini/antigravity/Hana Intel/hana-intel/shopify_customers_export_26-02-2026.csv"
+# Configuração de Caminho do CSV (Pode ser passado via argumento)
+DEFAULT_CSV_PATH = "/Users/takimotojuliano/.gemini/antigravity/Hana Intel/hana-intel/shopify_customers_export_26-02-2026.csv"
+CSV_PATH = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_CSV_PATH
 
 def clean_phone(phone_str):
     if not phone_str or phone_str == "":
