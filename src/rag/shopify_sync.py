@@ -139,7 +139,7 @@ class ShopifyCustomerSync:
         import asyncio
         import re
         from sqlalchemy.future import select
-        from src.database import async_session_maker
+        from src.database import async_session_maker, engine, Base
         import logging
         logger = logging.getLogger(__name__)
         
@@ -147,6 +147,10 @@ class ShopifyCustomerSync:
         if not async_session_maker or not self.base_url:
             logger.error("❌ Credenciais Shopify ausentes para sync de Clientes.")
             return
+
+        # Garantir que as tabelas existem (especialmente em novas bases)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
         headers = {
             "X-Shopify-Access-Token": self.access_token,

@@ -8,6 +8,17 @@ import os
 from src.tasks import process_strategic_intent
 from src.routers import webhooks
 
+from contextlib import asynccontextmanager
+from src.database import engine, Base
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Inicialização: criar tabelas se não existirem
+    import src.models # Garante que as tabelas sejam registradas no Base.metadata
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
 # Configuração básica de logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -15,7 +26,8 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Hana Intel 2.0",
     description="Ecossistema Multi-Agent de CRM e Automação (Assíncrono)",
-    version="2.0.0"
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 # CORS Middleware (permitir comunicação com futuro painel Vue/React)
