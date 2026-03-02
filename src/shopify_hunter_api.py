@@ -25,8 +25,8 @@ class ShopifyHunterAPI:
             "Content-Type": "application/json"
         }
 
-    async def fetch_abandoned_checkouts(self, limit=5, hours_ago=24):
-        """Busca checkouts abandonados recentes."""
+    async def fetch_abandoned_checkouts(self, limit=10, hours_ago=168):
+        """Busca checkouts abandonados recentes (últimos 7 dias)."""
         if not self.base_url or not self.access_token:
             logger.warning("Faltam credenciais da Shopify (Hunter).")
             return []
@@ -81,8 +81,8 @@ class ShopifyHunterAPI:
                 logger.error(f"Erro ao buscar checkouts abandonados: {str(e)}")
                 return []
 
-    async def fetch_inactive_vip_customers(self, limit=5, days_inactive=45):
-        """Busca clientes VIPs que não compram há algum tempo."""
+    async def fetch_inactive_vip_customers(self, limit=10, days_inactive=7):
+        """Busca clientes VIPs que não compram há algum tempo (últimos 7 dias)."""
         if not self.base_url or not self.access_token:
             return []
 

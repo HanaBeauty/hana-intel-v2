@@ -17,11 +17,11 @@ async def run_hunter_logic():
     from src.agents_crew import crew_content_lab
     
     async with async_session_maker() as db:
-        # 1. Buscar Oportunidades (Checkouts Abandonados)
-        checkouts = await shopify_hunter_api.fetch_abandoned_checkouts(limit=5)
+        # 1. Buscar Oportunidades (Checkouts Abandonados - 7 dias)
+        checkouts = await shopify_hunter_api.fetch_abandoned_checkouts()
         
-        # 2. Buscar Oportunidades (Clientes VIP Inativos)
-        inativos = await shopify_hunter_api.fetch_inactive_vip_customers(limit=5)
+        # 2. Buscar Oportunidades (Clientes VIP Inativos - 7 dias)
+        inativos = await shopify_hunter_api.fetch_inactive_vip_customers()
         
         todas_oportunidades = checkouts + inativos
         
