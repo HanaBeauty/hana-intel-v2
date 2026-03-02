@@ -204,14 +204,18 @@ class ShopifyCustomerSync:
                             existing_contact = result.scalars().first()
                             
                             nome = f"{cust.get('first_name', '')} {cust.get('last_name', '')}".strip()
+                            # CORREÇÃO: Pegar email se existir, senão None
                             email = cust.get("email")
+                            if not email or email == "":
+                                email = None
+
                             total_spent = str(cust.get("total_spent", "0.0"))
                             
                             if existing_contact:
                                 if nome:
                                     existing_contact.name = nome
-                                if email:
-                                    existing_contact.email = email
+                                # CORREÇÃO: Atualizar e-mail
+                                existing_contact.email = email
                                 existing_contact.total_spent = total_spent
                                 # Atualiza o telefone se ele era nulo e agora temos (caso raro de merge mas util)
                                 if phone_clean and not existing_contact.phone:
@@ -221,7 +225,7 @@ class ShopifyCustomerSync:
                                 novo_contact = Contact(
                                     id=contact_id,
                                     name=nome or f"Cliente Shopify {shopify_id}",
-                                    phone=phone_clean,
+                                    phone=phone_clean, # Aqui será None se não houver telefone
                                     email=email,
                                     total_spent=total_spent,
                                     last_interaction=datetime.datetime.utcnow(),

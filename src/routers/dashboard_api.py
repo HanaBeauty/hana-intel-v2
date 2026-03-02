@@ -250,22 +250,32 @@ async def send_admin_message(remoteJid: str, payload: AdminMessageRequest):
 from src.models import Contact
 
 @router.get("/contacts/list")
-async def get_contacts_list(db: AsyncSession = Depends(get_db_session)):
+async def get_contacts_list(
+    limit: int = 50, 
+    offset: int = 0,
+    db: AsyncSession = Depends(get_db_session)
+):
     """
-    Retorna a lista mestre (CRM) de todos os contatos captados.
-    Ordenados pelas interações mais recentes.
+    Retorna a lista mestre (CRM) de todos os contatos captados com paginação.
     """
     try:
-        query = select(Contact).order_by(Contact.last_interaction.desc()).limit(300)
+        from sqlalchemy import func
+        # 1. Conta o total para o frontend saber quantas páginas existem
+        count_query = select(func.count(Contact.id))
+        count_result = await db.execute(count_query)
+        total_count = count_result.scalar() or 0
+
+        # 2. Busca a página atual
+        query = select(Contact).order_by(Contact.last_interaction.desc()).offset(offset).limit(limit)
         result = await db.execute(query)
         contacts = result.scalars().all()
         
-        return [
+        data = [
             {
                 "id": str(c.id),
                 "name": str(c.name) if c.name else "Lead Sem Nome",
-                "phone": str(c.phone) if c.phone else "",
-                "email": str(c.email) if c.email else "",
+                "phone": str(c.phone) if c.phone else None, # Retorna None se não tiver
+                "email": str(c.email) if c.email else None, # Retorna None se não tiver
                 "total_spent": str(c.total_spent) if c.total_spent else "0.0",
                 "last_interaction": c.last_interaction.isoformat() if c.last_interaction else None,
                 "status": str(c.status) if c.status else "lead",
@@ -273,10 +283,14 @@ async def get_contacts_list(db: AsyncSession = Depends(get_db_session)):
             }
             for c in contacts
         ]
+
+        return {
+            "total_count": total_count,
+            "contacts": data
+        }
     except Exception as e:
         import traceback
         error_msg = traceback.format_exc()
-        # Retorna 500 mas com os detalhes completos do crash!
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=500, content={"error": str(e), "traceback": error_msg})
 

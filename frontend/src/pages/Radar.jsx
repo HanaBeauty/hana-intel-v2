@@ -12,6 +12,9 @@ export default function Radar() {
   // Novos States para o CRM
   const [activeTab, setActiveTab] = useState('live'); // 'live' ou 'contacts'
   const [contactList, setContactList] = useState([]);
+  const [totalContacts, setTotalContacts] = useState(0);
+  const [pageSize, setPageSize] = useState(50);
+  const [currentPage, setCurrentPage] = useState(0);
 
   const fetchChats = async () => {
     try {
@@ -52,10 +55,12 @@ export default function Radar() {
 
   const fetchContacts = async () => {
     try {
-      const res = await fetch('/api/v1/dashboard/contacts/list');
+      const offset = currentPage * pageSize;
+      const res = await fetch(`/api/v1/dashboard/contacts/list?limit=${pageSize}&offset=${offset}`);
       if (res.ok) {
         const data = await res.json();
-        setContactList(data);
+        setContactList(data.contacts || []);
+        setTotalContacts(data.total_count || 0);
       }
     } catch (err) {
       console.error('Erro ao buscar lista de contatos:', err);
@@ -70,7 +75,7 @@ export default function Radar() {
     } else if (activeTab === 'contacts') {
       fetchContacts();
     }
-  }, [activeTab]);
+  }, [activeTab, pageSize, currentPage]);
 
   useEffect(() => {
     if (selectedChat) {
@@ -267,7 +272,7 @@ export default function Radar() {
                           <strong>{contact.name || 'Desconhecido'}</strong>
                         </div>
                       </td>
-                      <td><span className="font-mono">{contact.phone}</span></td>
+                      <td><span className="font-mono">{contact.phone || 'Sem Zap'}</span></td>
                       <td><span className="ltv-value-green">R$ {contact.total_spent}</span></td>
                       <td><span className="email-cell">{contact.email || '--'}</span></td>
                       <td>{new Date(contact.last_interaction).toLocaleDateString('pt-BR')}</td>
@@ -280,6 +285,46 @@ export default function Radar() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* CONTROLES DE PAGINAÇÃO */}
+            <div className="datagrid-footer">
+              <div className="pagination-info">
+                Exibindo {contactList.length} de {totalContacts} contatos
+              </div>
+
+              <div className="pagination-controls">
+                <div className="page-size-selector">
+                  <span>Itens por página:</span>
+                  {[50, 100, 500].map(size => (
+                    <button
+                      key={size}
+                      className={`btn-size ${pageSize === size ? 'active' : ''}`}
+                      onClick={() => { setPageSize(size); setCurrentPage(0); }}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="page-nav">
+                  <button
+                    className="btn-nav"
+                    disabled={currentPage === 0}
+                    onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  >
+                    Anterior
+                  </button>
+                  <span className="current-page">Página {currentPage + 1}</span>
+                  <button
+                    className="btn-nav"
+                    disabled={(currentPage + 1) * pageSize >= totalContacts}
+                    onClick={() => setCurrentPage(prev => prev + 1)}
+                  >
+                    Próximo
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -631,6 +676,40 @@ export default function Radar() {
 
         .status-pill.client { background: rgba(212, 175, 55, 0.1); color: var(--color-primary); border: 1px solid rgba(212, 175, 55, 0.3); }
         .status-pill.lead { background: rgba(100, 100, 100, 0.2); color: #9ca3af; border: 1px solid rgba(100, 100, 100, 0.4); }
+
+        .datagrid-footer {
+          padding: 16px 24px;
+          border-top: 1px solid var(--color-border);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: rgba(0,0,0,0.2);
+        }
+
+        .pagination-info { font-size: 0.85rem; color: var(--color-text-secondary); }
+        
+        .pagination-controls { display: flex; align-items: center; gap: 24px; }
+        
+        .page-size-selector { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--color-text-secondary); }
+        
+        .btn-size {
+          background: rgba(255,255,255,0.05); border: 1px solid var(--color-border);
+          color: white; padding: 4px 10px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+        }
+        .btn-size:hover { background: rgba(255,255,255,0.1); }
+        .btn-size.active { background: var(--color-primary); color: black; border-color: var(--color-primary); }
+        
+        .page-nav { display: flex; align-items: center; gap: 12px; }
+        
+        .btn-nav {
+          background: rgba(255,255,255,0.05); border: 1px solid var(--color-border);
+          color: white; padding: 6px 16px; border-radius: 6px; cursor: pointer; transition: 0.2s;
+          font-size: 0.85rem;
+        }
+        .btn-nav:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: var(--color-primary); }
+        .btn-nav:disabled { opacity: 0.3; cursor: not-allowed; }
+        
+        .current-page { font-size: 0.9rem; color: var(--color-primary); font-weight: 600; }
 
       `}</style>
       </div>
