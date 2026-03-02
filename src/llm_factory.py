@@ -18,7 +18,18 @@ class LLMFactory:
             api_key = os.getenv("OPENAI_API_KEY")
             model = model_name or "gpt-4o-mini"
             if not api_key:
-                logger.warning("OPENAI_API_KEY ausente. Usando mock ou falhará no start.")
+                error_msg = "OPENAI_API_KEY ausente em produção!"
+                logger.warning(error_msg)
+                try:
+                    import redis
+                    import json
+                    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+                    r = redis.Redis.from_url(redis_url, decode_responses=True)
+                    log_entry = {"time": "Agora", "origin": "LLM_FACTORY", "action": "AUTH_ERROR", "dest": error_msg}
+                    r.lpush("dashboard_logs", json.dumps(log_entry))
+                    r.ltrim("dashboard_logs", 0, 19)
+                except:
+                    pass
                 return None
             return ChatOpenAI(model=model, api_key=api_key, temperature=0.7)
             
