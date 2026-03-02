@@ -23,16 +23,26 @@ def process_strategic_intent(self, user_intent: str, content_type: str = "conte�
         from src.models import Campaign, CampaignStatus
         if sync_session_maker:
             with sync_session_maker() as session:
+                # Parsing básico das variantes A/B/C geradas pelo CrewAI
+                variations_dict = {}
+                parts = str(resultado_crew).split("--- VARIANTE")
+                for part in parts:
+                    if "A ---" in part: variations_dict["A"] = part.split("---", 1)[1].strip()
+                    if "B ---" in part: variations_dict["B"] = part.split("---", 1)[1].strip()
+                    if "C ---" in part: variations_dict["C"] = part.split("---", 1)[1].strip()
+
+                import json
                 nova_campanha = Campaign(
                     title=f"Campanha Gerada: {content_type.capitalize()}",
                     intent=user_intent,
                     channel=content_type,
-                    generated_content=str(resultado_crew),
+                    generated_content=str(resultado_crew), # Fallback mantendo o original
+                    variations=json.dumps(variations_dict) if variations_dict else None,
                     status=CampaignStatus.draft
                 )
                 session.add(nova_campanha)
                 session.commit()
-                logger.info(f"💾 [Celery Worker] Campanha salva com sucesso (Status: Draft, ID: {nova_campanha.id})")
+                logger.info(f"💾 [Celery Worker] Campanha A/B/C salva com sucesso (ID: {nova_campanha.id})")
         else:
             logger.warning("⚠️ sync_session_maker indisponível. Campanha não foi persistida!")
     except Exception as e:
@@ -62,9 +72,17 @@ def process_evolution_webhook_task(self, payload: dict):
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         r = redis.Redis.from_url(redis_url, decode_responses=True)
         
-        # Pega o número do cliente e o texto da mensagem
+        # Pega o JID completo (Remetente/Grupo/Canal)
         remote_jid = key.get("remoteJid", "Desconhecido")
+        
+        # Identifica o tipo de chat: Grupo, Canal ou Pessoa
+        is_group = "@g.us" in remote_jid
+        is_newsletter = "@newsletter" in remote_jid
+        
+        # ID Limpo para o Redis/Banco (Se for grupo, mantém o @g.us para separar conversas)
         number = remote_jid.replace("@s.whatsapp.net", "")
+        if not is_group and not is_newsletter:
+            number = "".join(filter(str.isdigit, number))
         
         texto_msg = message_info.get("conversation", "")
         if not texto_msg and isinstance(message_info.get("extendedTextMessage"), dict):
@@ -83,19 +101,25 @@ def process_evolution_webhook_task(self, payload: dict):
 
                     if lead:
                         lead.last_interaction = datetime.datetime.utcnow()
+                        # Atualiza nome se for um lead genérico e agora temos o pushName
                         if contact_name and lead.name and "Lead" in lead.name:
                             lead.name = contact_name
                     else:
+                        # Se for grupo/newsletter, o nome pode vir diferente no payload
+                        if is_group:
+                            # Tentar pegar nome do grupo se disponível no futuro, por ora identificamos
+                            contact_name = payload.get("data", {}).get("groupName", f"Grupo {number[:8]}")
+                            
                         novo_lead = Contact(
                             id=number,
                             name=contact_name,
-                            phone=number,
+                            phone=number if not is_group and not is_newsletter else None,
                             last_interaction=datetime.datetime.utcnow(),
-                            status="lead"
+                            status="group" if is_group else ("newsletter" if is_newsletter else "lead")
                         )
                         session.add(novo_lead)
                     session.commit()
-                    logger.info(f"💾 [CRM Contact] Lead {number} atualizado com sucesso no PostgreSQL.")
+                    logger.info(f"💾 [CRM Contact] {event_type} para {number} processado no PostgreSQL.")
         except Exception as e:
             logger.error(f"❌ Erro ao sincronizar Contato no PostgreSQL via Celery: {e}")
 

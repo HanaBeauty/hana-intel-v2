@@ -1,126 +1,166 @@
-import { Sparkles, CalendarDays, BookOpen, Send, Zap } from 'lucide-react';
+import { useState } from 'react';
+import { Sparkles, CalendarDays, BookOpen, Send, Zap, Save } from 'lucide-react';
 
 export default function NurtureHub() {
-    return (
-        <div className="nurture-hub animate-fade-in">
-            <header className="page-header">
-                <div>
-                    <h1 className="page-title">Nurture Hub</h1>
-                    <p className="page-subtitle">Motor Autônomo de Nutrição e Autoridade da Comunidade</p>
+  const [cards, setCards] = useState([
+    {
+      id: 1,
+      tag: 'Técnica: Umidade',
+      tagClass: 'tag-technical',
+      time: 'Gerado há 2 horas',
+      title: 'O Segredo Oculto do Ar Condicionado no Efeito Falsa Colagem',
+      body: '"Bom dia, comunidade Ouro! ✨ Notou que seus fios estão soltando mais rápido essa semana? Antes de culpar o adesivo, olhe para a saída de ar do seu estúdio. O vento direto acelera a cura e pode causar uma falsa colagem..."',
+      isEditing: false
+    },
+    {
+      id: 2,
+      tag: 'Posicionamento Premium',
+      tagClass: 'tag-mindset',
+      time: 'Gerado ontem às 18:00',
+      title: 'Não brigue por preço, justifique com retenção.',
+      body: 'O mercado está cheio de quem cobra barato. Você não é mais uma na multidão. Assuma seu valor cobrando pela segurança do seu procedimento...',
+      isEditing: false,
+      isEmail: true
+    }
+  ]);
+
+  const handleToggleEdit = (id) => {
+    setCards(cards.map(c => c.id === id ? { ...c, isEditing: !c.isEditing } : c));
+  };
+
+  const handleSave = (id, newBody) => {
+    setCards(cards.map(c => c.id === id ? { ...c, body: newBody, isEditing: false } : c));
+    // Em produção aqui dispararia um fetch PUT
+  };
+
+  return (
+    <div className="nurture-hub animate-fade-in">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Nurture Hub</h1>
+          <p className="page-subtitle">Motor Autônomo de Nutrição e Autoridade da Comunidade</p>
+        </div>
+        <div className="header-actions">
+          <button className="btn btn-primary" onClick={() => alert('Disparando Celery Nurture Task...')}>
+            <Zap size={18} /> Forçar Insight Agora
+          </button>
+        </div>
+      </header>
+
+      <div className="layout-grid">
+        {/* Painel Esquerdo: Fila de Conteúdo e Dicas */}
+        <div className="content-col">
+          <div className="panel-header">
+            <Sparkles className="text-warning" size={24} />
+            <h2>Dicas & Pílulas Prontas (Aprovação)</h2>
+          </div>
+
+          <div className="content-deck">
+            {cards.map(card => (
+              <div key={card.id} className="content-card">
+                <div className="card-header">
+                  <span className={`badge ${card.tagClass}`}>{card.tag}</span>
+                  <span className="timestamp">{card.time}</span>
                 </div>
-                <div className="header-actions">
-                    <button className="btn btn-primary" onClick={() => alert('Disparando Celery Nurture Task...')}>
-                        <Zap size={18} /> Forçar Insight Agora
+                <h3 className="content-title">{card.title}</h3>
+
+                {card.isEditing ? (
+                  <textarea
+                    className="edit-nurture-textarea"
+                    defaultValue={card.body}
+                    id={`edit-${card.id}`}
+                  />
+                ) : (
+                  card.isEmail ? (
+                    <div className="email-preview-box">
+                      <h4>[E-mail HTML - Tema Preto/Dourado]</h4>
+                      <p>{card.body}</p>
+                    </div>
+                  ) : (
+                    <p className="content-body">{card.body}</p>
+                  )
+                )}
+
+                <div className="card-actions">
+                  {card.isEditing ? (
+                    <button className="btn btn-primary-sm" onClick={() => handleSave(card.id, document.getElementById(`edit-${card.id}`).value)}>
+                      <Save size={14} /> Salvar Alterações
                     </button>
+                  ) : (
+                    <button className="btn btn-outline-sm" onClick={() => handleToggleEdit(card.id)}>
+                      <BookOpen size={14} /> Editar Copy
+                    </button>
+                  )}
+                  <button className="btn btn-primary-sm">
+                    <Send size={14} /> {card.isEmail ? 'Aprovar disparo de E-mail' : 'Aprovar p/ Grupos WhatsApp'}
+                  </button>
                 </div>
-            </header>
+              </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="layout-grid">
-                {/* Painel Esquerdo: Fila de Conteúdo e Dicas */}
-                <div className="content-col">
-                    <div className="panel-header">
-                        <Sparkles className="text-warning" size={24} />
-                        <h2>Dicas & Pílulas Prontas (Aprovação)</h2>
-                    </div>
-
-                    <div className="content-deck">
-                        {/* Card Exemplo 1 */}
-                        <div className="content-card">
-                            <div className="card-header">
-                                <span className="badge tag-technical">Técnica: Umidade</span>
-                                <span className="timestamp">Gerado há 2 horas</span>
-                            </div>
-                            <h3 className="content-title">O Segredo Oculto do Ar Condicionado no Efeito Falsa Colagem</h3>
-                            <p className="content-body">
-                                "Bom dia, comunidade Ouro! ✨ Notou que seus fios estão soltando mais rápido essa semana?
-                                Antes de culpar o adesivo, olhe para a saída de ar do seu estúdio. O vento direto acelera a cura e pode causar uma falsa colagem..."
-                            </p>
-                            <div className="card-actions">
-                                <button className="btn btn-outline-sm"><BookOpen size={14} /> Editar Copy</button>
-                                <button className="btn btn-primary-sm"><Send size={14} /> Aprovar p/ Grupos WhatsApp</button>
-                            </div>
-                        </div>
-
-                        {/* Card Exemplo 2 */}
-                        <div className="content-card">
-                            <div className="card-header">
-                                <span className="badge tag-mindset">Posicionamento Premium</span>
-                                <span className="timestamp">Gerado ontem às 18:00</span>
-                            </div>
-                            <h3 className="content-title">Não brigue por preço, justifique com retenção.</h3>
-                            <div className="email-preview-box">
-                                <h4>[E-mail HTML - Tema Preto/Dourado]</h4>
-                                <p>O mercado está cheio de quem cobra barato. Você não é mais uma na multidão. Assuma seu valor cobrando pela segurança do seu procedimento...</p>
-                            </div>
-                            <div className="card-actions">
-                                <button className="btn btn-outline-sm"><BookOpen size={14} /> Editar Copy</button>
-                                <button className="btn btn-primary-sm"><Send size={14} /> Aprovar disparo de E-mail</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Coluna Direita: Controle Editorial */}
-                <div className="sidebar-col">
-                    <div className="glass-panel schedule-panel">
-                        <div className="panel-header">
-                            <CalendarDays className="text-primary" size={24} />
-                            <h3>Calendário Editorial AI</h3>
-                        </div>
-
-                        <div className="timeline">
-                            <div className="timeline-item">
-                                <div className="marker done"></div>
-                                <div className="content">
-                                    <strong>Terça-feira</strong>
-                                    <span>Técnica (Dica de Retenção)</span>
-                                    <small>Status: Disparado 🟢</small>
-                                </div>
-                            </div>
-                            <div className="timeline-item">
-                                <div className="marker active"></div>
-                                <div className="content">
-                                    <strong>Quinta-feira</strong>
-                                    <span>Motivacional (Story de Engajamento)</span>
-                                    <small>Status: Pendente Revisão 🟡</small>
-                                </div>
-                            </div>
-                            <div className="timeline-item">
-                                <div className="marker pending"></div>
-                                <div className="content">
-                                    <strong>Sábado</strong>
-                                    <span>E-mail Marketing (Novidade / Catálogo)</span>
-                                    <small>Status: Aguardando Criação ⚪</small>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="glass-panel config-panel mt-4">
-                        <h3>Configurações do Hub</h3>
-                        <p className="text-muted mb-3 mt-1 text-sm">Regras de negócio que o AI Lab respeita ao criar.</p>
-
-                        <div className="form-group mb-3">
-                            <label className="text-sm">Frequência Autônoma</label>
-                            <select className="form-select w-100 bg-dark text-white border-secondary p-2 rounded mt-1">
-                                <option>1 Dica a cada 2 dias (Recomendado)</option>
-                                <option>1 Dica diária</option>
-                                <option>Apenas sob demanda (Manual)</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="text-sm">Tom de Voz</label>
-                            <select className="form-select w-100 bg-dark text-white border-secondary p-2 rounded mt-1">
-                                <option>Premium Ouro (Educativo Rígido)</option>
-                                <option>Amigável/Inspiracional (Comunidade)</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+        {/* Coluna Direita: Controle Editorial */}
+        <div className="sidebar-col">
+          <div className="glass-panel schedule-panel">
+            <div className="panel-header">
+              <CalendarDays className="text-primary" size={24} />
+              <h3>Calendário Editorial AI</h3>
             </div>
 
-            <style>{`
+            <div className="timeline">
+              <div className="timeline-item">
+                <div className="marker done"></div>
+                <div className="content">
+                  <strong>Terça-feira</strong>
+                  <span>Técnica (Dica de Retenção)</span>
+                  <small>Status: Disparado 🟢</small>
+                </div>
+              </div>
+              <div className="timeline-item">
+                <div className="marker active"></div>
+                <div className="content">
+                  <strong>Quinta-feira</strong>
+                  <span>Motivacional (Story de Engajamento)</span>
+                  <small>Status: Pendente Revisão 🟡</small>
+                </div>
+              </div>
+              <div className="timeline-item">
+                <div className="marker pending"></div>
+                <div className="content">
+                  <strong>Sábado</strong>
+                  <span>E-mail Marketing (Novidade / Catálogo)</span>
+                  <small>Status: Aguardando Criação ⚪</small>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="glass-panel config-panel mt-4">
+            <h3>Configurações do Hub</h3>
+            <p className="text-muted mb-3 mt-1 text-sm">Regras de negócio que o AI Lab respeita ao criar.</p>
+
+            <div className="form-group mb-3">
+              <label className="text-sm">Frequência Autônoma</label>
+              <select className="form-select w-100 bg-dark text-white border-secondary p-2 rounded mt-1">
+                <option>1 Dica a cada 2 dias (Recomendado)</option>
+                <option>1 Dica diária</option>
+                <option>Apenas sob demanda (Manual)</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label className="text-sm">Tom de Voz</label>
+              <select className="form-select w-100 bg-dark text-white border-secondary p-2 rounded mt-1">
+                <option>Premium Ouro (Educativo Rígido)</option>
+                <option>Amigável/Inspiracional (Comunidade)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
         .page-header {
           display: flex;
           justify-content: space-between;
@@ -302,6 +342,21 @@ export default function NurtureHub() {
         .text-sm { font-size: 0.875rem; }
         .text-muted { color: var(--color-text-secondary); }
 
+        .edit-nurture-textarea {
+          width: 100%;
+          min-height: 120px;
+          background: rgba(0, 0, 0, 0.4);
+          border: 1px solid var(--color-primary);
+          border-radius: 4px;
+          color: #fff;
+          padding: 12px;
+          font-family: inherit;
+          font-size: 0.9rem;
+          margin-bottom: 16px;
+          resize: vertical;
+          outline: none;
+        }
+
         /* Timeline */
         .timeline {
           display: flex;
@@ -357,6 +412,6 @@ export default function NurtureHub() {
           color: var(--color-text-secondary);
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 }

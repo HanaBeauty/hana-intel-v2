@@ -48,8 +48,13 @@ class ContentLabCrew:
         agents = self._create_agents()
         
         redacao_task = Task(
-            description=f'Escreva um(a) {content_type} focado na seguinte estratégia aprovada pela CEO: {strategy_directive}. O texto deve estar formatado para o canal específico (ex: HTML se for e-mail, markdown se for blog, hashtags e emojis se for rede social).',
-            expected_output=f'O conteúdo final formatado adequadamente como um(a) {content_type}, polido, persuasivo e pronto para publicação ou envio.',
+            description=(
+                f'Escreva 3 VARIANTES DISTINTAS (A, B e C) de um(a) {content_type} focado na seguinte estratégia: {strategy_directive}. '
+                'Cada variante deve ter um Gancho (Hook) e Tom de Voz levemente diferente, mas sempre respeitando o DNA Premium da Hana Beauty. '
+                'Formate a saída como um bloco de texto claro, separando cada variante por "--- VARIANTE X ---". '
+                'Se for e-mail, as variantes devem conter o HTML completo.'
+            ),
+            expected_output=f'Um bloco de texto contendo as 3 variantes (A, B e C) para o(a) {content_type}, polidas e separadas claramente.',
             agent=agents[0]
         )
 

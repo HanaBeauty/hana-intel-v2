@@ -1,103 +1,107 @@
+import { useState } from 'react';
 import { Activity, Beaker, ShieldAlert, Cpu } from 'lucide-react';
 
 export default function StrategyRoom() {
-    return (
-        <div className="strategy-room animate-fade-in">
-            <header className="page-header">
+  const [socialActive, setSocialActive] = useState(false);
+  return (
+    <div className="strategy-room animate-fade-in">
+      <header className="page-header">
+        <div>
+          <h1 className="page-title">Strategy Room</h1>
+          <p className="page-subtitle">Centro Neurológico de Orquestração da Inteligência Artificial</p>
+        </div>
+      </header>
+
+      <div className="layout-grid">
+        {/* Orquestração de Agentes */}
+        <div className="agents-panel glass-panel">
+          <div className="panel-header">
+            <Cpu className="text-primary" size={24} />
+            <h3>Orquestração CrewAI</h3>
+          </div>
+
+          <div className="agent-cards">
+            {/* Agente de Atendimento */}
+            <div className="agent-card">
+              <div className="agent-header">
                 <div>
-                    <h1 className="page-title">Strategy Room</h1>
-                    <p className="page-subtitle">Centro Neurológico de Orquestração da Inteligência Artificial</p>
+                  <h4>Hana Master (Atendimento)</h4>
+                  <span className="agent-status online">Online & Roteando</span>
                 </div>
-            </header>
-
-            <div className="layout-grid">
-                {/* Orquestração de Agentes */}
-                <div className="agents-panel glass-panel">
-                    <div className="panel-header">
-                        <Cpu className="text-primary" size={24} />
-                        <h3>Orquestração CrewAI</h3>
-                    </div>
-
-                    <div className="agent-cards">
-                        {/* Agente de Atendimento */}
-                        <div className="agent-card">
-                            <div className="agent-header">
-                                <div>
-                                    <h4>Hana Master (Atendimento)</h4>
-                                    <span className="agent-status online">Online & Roteando</span>
-                                </div>
-                                <label className="toggle-switch">
-                                    <input type="checkbox" defaultChecked />
-                                    <span className="slider"></span>
-                                </label>
-                            </div>
-                            <p className="agent-desc">Responsável por triar e rotear o atendimento primário via WhatsApp.</p>
-                        </div>
-
-                        {/* Agente Tira Dúvidas */}
-                        <div className="agent-card">
-                            <div className="agent-header">
-                                <div>
-                                    <h4>Hana Expert (Técnica)</h4>
-                                    <span className="agent-status online">Online na Base RAG</span>
-                                </div>
-                                <label className="toggle-switch">
-                                    <input type="checkbox" defaultChecked />
-                                    <span className="slider"></span>
-                                </label>
-                            </div>
-                            <p className="agent-desc">Dotado com o Manual Técnico Hana. Lê a documentação sobre adesivos, retenção e Lash Designers.</p>
-                        </div>
-
-                        {/* Agente Social */}
-                        <div className="agent-card">
-                            <div className="agent-header">
-                                <div>
-                                    <h4>Hana Social (Community)</h4>
-                                    <span className="agent-status standby">Standby</span>
-                                </div>
-                                <label className="toggle-switch">
-                                    <input type="checkbox" />
-                                    <span className="slider"></span>
-                                </label>
-                            </div>
-                            <p className="agent-desc">Postagens de conteúdo para grupos e status diário.</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="right-col">
-                    {/* Master Prompt */}
-                    <div className="master-prompt-panel glass-panel">
-                        <div className="panel-header">
-                            <Beaker className="text-warning" size={24} />
-                            <h3>The Master Prompt (Diretriz Global)</h3>
-                        </div>
-                        <textarea
-                            className="prompt-textarea"
-                            defaultValue="Você é a Hana. Você respira o DNA Black/Gold da Hana Beauty. Seu objetivo primário é atuar com frieza técnica e um altíssimo padrão para Lash Designers experientes, vendendo a segurança dos nossos adesivos."
-                        />
-                        <div className="actions">
-                            <button className="btn btn-outline">Atualizar Frequência Cerebral</button>
-                        </div>
-                    </div>
-
-                    {/* Regras de Ouro */}
-                    <div className="rules-panel glass-panel">
-                        <div className="panel-header">
-                            <ShieldAlert className="text-danger" size={24} />
-                            <h3>Regras Inflexíveis (Guardrails)</h3>
-                        </div>
-                        <ul className="guardrails-list">
-                            <li>Nunca confirmar troca/devolução de Adesivo se estiver aberto há mais de 30 dias.</li>
-                            <li>Sempre encaminhar para o humano no WhatsApp ao detectar irritação ocular.</li>
-                            <li>Não oferecer descontos que superem 15% sem autorização via Review Board.</li>
-                        </ul>
-                    </div>
-                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" defaultChecked />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              <p className="agent-desc">Responsável por triar e rotear o atendimento primário via WhatsApp.</p>
             </div>
 
-            <style>{`
+            {/* Agente Tira Dúvidas */}
+            <div className="agent-card">
+              <div className="agent-header">
+                <div>
+                  <h4>Hana Expert (Técnica)</h4>
+                  <span className="agent-status online">Online na Base RAG</span>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" defaultChecked />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              <p className="agent-desc">Dotado com o Manual Técnico Hana. Lê a documentação sobre adesivos, retenção e Lash Designers.</p>
+            </div>
+
+            {/* Agente Social */}
+            <div className="agent-card">
+              <div className="agent-header">
+                <div>
+                  <h4>Hana Social (Community)</h4>
+                  <span className={`agent-status ${socialActive ? 'online' : 'standby'}`}>
+                    {socialActive ? 'Online & Postando' : 'Standby'}
+                  </span>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={socialActive} onChange={() => setSocialActive(!socialActive)} />
+                  <span className="slider"></span>
+                </label>
+              </div>
+              <p className="agent-desc">Postagens de conteúdo para grupos e status diário.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="right-col">
+          {/* Master Prompt */}
+          <div className="master-prompt-panel glass-panel">
+            <div className="panel-header">
+              <Beaker className="text-warning" size={24} />
+              <h3>The Master Prompt (Diretriz Global)</h3>
+            </div>
+            <textarea
+              className="prompt-textarea"
+              defaultValue="Você é a Hana. Você respira o DNA Black/Gold da Hana Beauty. Seu objetivo primário é atuar com frieza técnica e um altíssimo padrão para Lash Designers experientes, vendendo a segurança dos nossos adesivos."
+            />
+            <div className="actions">
+              <button className="btn btn-outline">Atualizar Frequência Cerebral</button>
+            </div>
+          </div>
+
+          {/* Regras de Ouro */}
+          <div className="rules-panel glass-panel">
+            <div className="panel-header">
+              <ShieldAlert className="text-danger" size={24} />
+              <h3>Regras Inflexíveis (Guardrails)</h3>
+            </div>
+            <ul className="guardrails-list">
+              <li>Nunca confirmar troca/devolução de Adesivo se estiver aberto há mais de 30 dias.</li>
+              <li>Sempre encaminhar para o humano no WhatsApp ao detectar irritação ocular.</li>
+              <li>Não oferecer descontos que superem 15% sem autorização via Review Board.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <style>{`
         .page-header {
           margin-bottom: 32px;
         }
@@ -300,6 +304,6 @@ export default function StrategyRoom() {
           transform: translateX(20px);
         }
       `}</style>
-        </div>
-    );
+    </div>
+  );
 }

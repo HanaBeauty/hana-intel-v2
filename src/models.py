@@ -63,6 +63,9 @@ class Campaign(Base):
     # O conteúdo gerado pela inteligência artificial
     generated_content = Column(Text, nullable=True)
     
+    # NOVAS VARIANTES A/B/C (JSON formatado como string)
+    variations = Column(Text, nullable=True)
+    
     status = Column(Enum(CampaignStatus), default=CampaignStatus.draft)
     
     created_at = Column(DateTime, default=datetime.datetime.utcnow)

@@ -52,6 +52,42 @@ async def approve_campaign(campaign_id: int, db: AsyncSession = Depends(get_db_s
     
     return {"message": "Campanha aprovada e enviada para disparo.", "id": campaign_id}
 
+@router.put("/campaigns/{campaign_id}/update")
+async def update_campaign_content(campaign_id: int, payload: Dict[str, Any], db: AsyncSession = Depends(get_db_session)):
+    """Atualiza manualmente o conteúdo de um rascunho (Edição Humana)"""
+    query = select(Campaign).where(Campaign.id == campaign_id)
+    result = await db.execute(query)
+    campaign = result.scalars().first()
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campanha não encontrada")
+        
+    if "content" in payload:
+        campaign.generated_content = payload["content"]
+    if "variations" in payload:
+        import json
+        campaign.variations = json.dumps(payload["variations"])
+        
+    await db.commit()
+    return {"message": "Conteúdo atualizado com sucesso."}
+
+from src.tasks import process_strategic_intent
+
+@router.post("/campaigns/{campaign_id}/regenerate")
+async def regenerate_campaign(campaign_id: int, db: AsyncSession = Depends(get_db_session)):
+    """Solicita que a IA gere novas variações para uma intenção existente"""
+    query = select(Campaign).where(Campaign.id == campaign_id)
+    result = await db.execute(query)
+    campaign = result.scalars().first()
+    
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Campanha não encontrada")
+        
+    # Dispara a tarefa novamente com o mesmo intent
+    process_strategic_intent.delay(campaign.intent, campaign.channel)
+    
+    return {"message": "IA convocada para regenerar conteúdo. Aguarde alguns instantes."}
+
 # --- Radar 360 (WhatsApp Live) ---
 
 def get_redis_client():
