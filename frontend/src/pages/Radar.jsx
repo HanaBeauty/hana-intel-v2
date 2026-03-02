@@ -15,6 +15,7 @@ export default function Radar() {
   const [totalContacts, setTotalContacts] = useState(0);
   const [pageSize, setPageSize] = useState(50);
   const [currentPage, setCurrentPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchChats = async () => {
     try {
@@ -56,7 +57,11 @@ export default function Radar() {
   const fetchContacts = async () => {
     try {
       const offset = currentPage * pageSize;
-      const res = await fetch(`/api/v1/dashboard/contacts/list?limit=${pageSize}&offset=${offset}`);
+      let url = `/api/v1/dashboard/contacts/list?limit=${pageSize}&offset=${offset}`;
+      if (searchQuery) {
+        url += `&q=${encodeURIComponent(searchQuery)}`;
+      }
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setContactList(data.contacts || []);
@@ -75,7 +80,12 @@ export default function Radar() {
     } else if (activeTab === 'contacts') {
       fetchContacts();
     }
-  }, [activeTab, pageSize, currentPage]);
+  }, [activeTab, pageSize, currentPage, searchQuery]);
+
+  // Reset page when searching
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchQuery]);
 
   useEffect(() => {
     if (selectedChat) {
@@ -243,7 +253,12 @@ export default function Radar() {
               <h2>Gestão de Leads & Clientes ({contactList.length})</h2>
               <div className="search-bar">
                 <Search size={16} />
-                <input type="text" placeholder="Buscar por nome, telefone ou status..." />
+                <input
+                  type="text"
+                  placeholder="Buscar por nome, e-mail ou telefone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
               </div>
             </div>
 

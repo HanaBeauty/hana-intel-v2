@@ -203,8 +203,18 @@ class ShopifyCustomerSync:
                             result = await session.execute(query)
                             existing_contact = result.scalars().first()
                             
-                            nome = f"{cust.get('first_name', '')} {cust.get('last_name', '')}".strip()
-                            # CORREÇÃO: Pegar email se existir, senão None
+                            # EXTRAÇÃO PROFUNDA DE NOME
+                            first_name = cust.get('first_name')
+                            last_name = cust.get('last_name')
+                            
+                            # Fallback para default_address se nome estiver vazio na raiz
+                            if not first_name and cust.get('default_address'):
+                                first_name = cust.get('default_address', {}).get('first_name')
+                                last_name = cust.get('default_address', {}).get('last_name')
+                                
+                            nome = f"{first_name or ''} {last_name or ''}".strip()
+                            
+                            # EXTRAÇÃO PROFUNDA DE EMAIL
                             email = cust.get("email")
                             if not email or email == "":
                                 email = None

@@ -253,20 +253,36 @@ from src.models import Contact
 async def get_contacts_list(
     limit: int = 50, 
     offset: int = 0,
+    q: str = None,
     db: AsyncSession = Depends(get_db_session)
 ):
     """
     Retorna a lista mestre (CRM) de todos os contatos captados com paginação.
     """
     try:
-        from sqlalchemy import func
-        # 1. Conta o total para o frontend saber quantas páginas existem
-        count_query = select(func.count(Contact.id))
+        from sqlalchemy import func, or_
+        
+        # 1. Base da Query
+        base_query = select(Contact)
+        
+        # 1.1 Filtro de Busca (Global)
+        if q:
+            search_filter = f"%{q}%"
+            base_query = base_query.where(
+                or_(
+                    Contact.name.ilike(search_filter),
+                    Contact.email.ilike(search_filter),
+                    Contact.phone.ilike(search_filter)
+                )
+            )
+
+        # 2. Conta o total (com filtro aplicado)
+        count_query = select(func.count()).select_from(base_query.subquery())
         count_result = await db.execute(count_query)
         total_count = count_result.scalar() or 0
 
-        # 2. Busca a página atual
-        query = select(Contact).order_by(Contact.last_interaction.desc()).offset(offset).limit(limit)
+        # 3. Busca a página atual
+        query = base_query.order_by(Contact.last_interaction.desc()).offset(offset).limit(limit)
         result = await db.execute(query)
         contacts = result.scalars().all()
         
