@@ -46,7 +46,24 @@ def process_strategic_intent(self, user_intent: str, content_type: str = "conte�
         else:
             logger.warning("⚠️ sync_session_maker indisponível. Campanha não foi persistida!")
     except Exception as e:
-        logger.error(f"❌ Erro ao salvar Draft da Campanha no PostgreSQL: {e}")
+        error_msg = f"❌ Erro ao salvar Draft da Campanha no PostgreSQL: {e}"
+        logger.error(error_msg)
+        # Injeta log de erro na telemetria (via Redis para consumo rápido na dashboard)
+        try:
+            import redis
+            import json
+            redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+            r = redis.Redis.from_url(redis_url, decode_responses=True)
+            log_entry = {
+                "time": "Agora",
+                "origin": "AI_CORE",
+                "action": "DRAFT_SAVE_ERROR",
+                "dest": f"Error: {str(e)[:50]}..."
+            }
+            r.lpush("dashboard_logs", json.dumps(log_entry))
+            r.ltrim("dashboard_logs", 0, 19)
+        except:
+            pass
 
     logger.info(f"✅ [Celery Worker] Tarefa concluída.")
     return {"status": "success", "result": resultado_crew}

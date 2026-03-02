@@ -381,9 +381,20 @@ async def get_telemetry_data(db: AsyncSession = Depends(get_db_session)):
     active_leads_keys = r.keys("chat_history:*")
     active_leads_count = len(active_leads_keys)
     
-    logs = [
-        {"time": "Agora", "origin": "system", "action": "TELEMETRY_SYNC", "dest": "Dashboard"}
-    ]
+    # 3. Ler logs reais do Redis (Depuração de IA e Workers)
+    import json
+    raw_logs = r.lrange("dashboard_logs", 0, 15)
+    logs = []
+    for rl in raw_logs:
+        try:
+            logs.append(json.loads(rl))
+        except:
+            continue
+            
+    if not logs:
+        logs = [
+            {"time": "Agora", "origin": "system", "action": "TELEMETRY_SYNC", "dest": "Dashboard"}
+        ]
 
     return {
         "health": {
