@@ -136,7 +136,7 @@ def process_evolution_webhook_task(self, payload: dict):
             # A instância vem no payload (ex: "Hana_Intel_PRO")
             instance_name = payload.get("instance", "Hana_Intel_PRO")
             evo_url = os.getenv("EVOLUTION_API_URL", "https://webhook.adsai.com.br")
-            evo_token = os.getenv("EVOLUTION_API_TOKEN", "978C405A-31F2-439D-9A63-C439ADEEF30E") # Fallback provisório
+            evo_token = os.getenv("EVOLUTION_API_TOKEN", "")
             
             send_url = f"{evo_url.rstrip('/')}/message/sendText/{instance_name}"
             headers = {

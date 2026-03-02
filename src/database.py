@@ -7,7 +7,7 @@ from sqlalchemy.orm import declarative_base
 logger = logging.getLogger(__name__)
 
 # O default pega de variáveis ambiente; o replace ajusta a URL sincrona para async
-raw_url = os.getenv("DATABASE_URL", "postgresql://hana_admin:c0c1164a842da069a9a9@hana-db:5432/hana_intel")
+raw_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/hana_intel")
 if raw_url.startswith("postgres://"):
     raw_url = raw_url.replace("postgres://", "postgresql://", 1)
 if raw_url.startswith("postgresql://"):

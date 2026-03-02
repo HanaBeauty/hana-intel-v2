@@ -12,7 +12,7 @@ from sqlalchemy.orm import sessionmaker
 import os
 from src.models import ProductKnowledge
 
-sync_url = os.getenv("DATABASE_URL", "postgresql://hana_admin:c0c1164a842da069a9a9@hana-db:5432/hana_intel")
+sync_url = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/hana_intel")
 if sync_url.startswith("postgres://"):
     sync_url = sync_url.replace("postgres://", "postgresql://", 1)
 if sync_url.startswith("postgresql+asyncpg://"):
