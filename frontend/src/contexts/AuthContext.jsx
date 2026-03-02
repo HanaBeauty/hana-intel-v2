@@ -4,8 +4,8 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-// A URL base muda de localhost para production dependendo do build
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Em produção (sem VITE_API_URL fixada), usa caminho relativo '' para apontar para o próprio adsai.com.br
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 export function AuthProvider({ children }) {
     const [user, setUser] = useState(null);
