@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from operator import itemgetter
-from crewai.tools import BaseTool
+from langchain.tools import BaseTool
 from typing import Type
 import requests
 import logging
