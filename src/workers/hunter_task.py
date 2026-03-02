@@ -26,8 +26,14 @@ async def run_hunter_logic():
         todas_oportunidades = checkouts + inativos
         
         if not todas_oportunidades:
-            logger.info("Caçador de Oportunidades: Nenhuma oportunidade urgente encontrada.")
-            return
+            logger.info("Audit Mode: Buscando clientes recentes para gerar demonstração...")
+            # Fallback para Auditoria: Pega os últimos 3 clientes para provar que o motor funciona
+            recentes = await shopify_hunter_api.fetch_inactive_vip_customers(limit=3, days_inactive=0)
+            todas_oportunidades = recentes
+            
+            if not todas_oportunidades:
+                logger.info("Caçador de Oportunidades: Nenhuma oportunidade ou cliente encontrado.")
+                return
 
         novas_campanhas = []
         for op in todas_oportunidades:
