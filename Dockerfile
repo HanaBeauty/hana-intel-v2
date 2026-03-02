@@ -27,8 +27,9 @@ ENV PIP_NO_CACHE_DIR=1 \
     PIP_DEFAULT_TIMEOUT=120
 
 COPY requirements.txt .
-RUN pip install --upgrade pip setuptools wheel
-RUN pip install --no-cache-dir -r requirements.txt
+# Utilizando UV (Astral) para resolver gargalos assombrosos de CPU e Timeouts de compilação
+RUN pip install --upgrade pip setuptools wheel uv
+RUN uv pip install --system --no-cache-dir -r requirements.txt
 
 # Copia código fonte do Python
 COPY . .
