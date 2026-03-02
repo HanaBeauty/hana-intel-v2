@@ -178,17 +178,28 @@ class ShopifyCustomerSync:
                         if not customers:
                             break
                             
+                        lote_stats = {"added": 0, "updated": 0, "ignored": 0}
                         for cust in customers:
+                            shopify_id = cust.get("id")
                             phone = cust.get("phone") or cust.get("default_address", {}).get("phone")
-                            if not phone:
-                                continue
                             
-                            # Limpar telefone pra formato WhatsApp Brasileiro
-                            phone_clean = ''.join(filter(str.isdigit, str(phone)))
-                            if len(phone_clean) in (10, 11):
-                                phone_clean = f"55{phone_clean}"
+                            # ID Primário: Preferência por Telefone Clean, senão ID Shopify
+                            phone_clean = None
+                            if phone:
+                                phone_clean = ''.join(filter(str.isdigit, str(phone)))
+                                if len(phone_clean) in (10, 11):
+                                    phone_clean = f"55{phone_clean}"
+                            
+                            # Se não tem telefone, usamos o ID da Shopify como ID do contato
+                            contact_id = phone_clean if phone_clean else f"shp_{shopify_id}"
+                            
+                            # Busca por ID primário ou Telefone (se existir)
+                            existing_contact = None
+                            if phone_clean:
+                                query = select(Contact).where((Contact.id == contact_id) | (Contact.phone == phone_clean))
+                            else:
+                                query = select(Contact).where(Contact.id == contact_id)
                                 
-                            query = select(Contact).where(Contact.phone == phone_clean)
                             result = await session.execute(query)
                             existing_contact = result.scalars().first()
                             
@@ -202,10 +213,14 @@ class ShopifyCustomerSync:
                                 if email:
                                     existing_contact.email = email
                                 existing_contact.total_spent = total_spent
+                                # Atualiza o telefone se ele era nulo e agora temos (caso raro de merge mas util)
+                                if phone_clean and not existing_contact.phone:
+                                    existing_contact.phone = phone_clean
+                                lote_stats["updated"] += 1
                             else:
                                 novo_contact = Contact(
-                                    id=phone_clean,
-                                    name=nome or f"Cliente Shopify {cust['id']}",
+                                    id=contact_id,
+                                    name=nome or f"Cliente Shopify {shopify_id}",
                                     phone=phone_clean,
                                     email=email,
                                     total_spent=total_spent,
@@ -213,11 +228,12 @@ class ShopifyCustomerSync:
                                     status="client"
                                 )
                                 session.add(novo_contact)
+                                lote_stats["added"] += 1
                                 
                         # Commit parcial por lote pra não estourar RAM / Tabela
                         await session.commit()
                         total_processed += len(customers)
-                        logger.info(f"✅ Lote OK! Total consolidado no CRM: {total_processed} contatos.")
+                        logger.info(f"✅ Lote OK! [Novos: {lote_stats['added']} | Updates: {lote_stats['updated']}] - Total no CRM: {total_processed}")
                         
                         # Parse do Link Header para Paginação Segura
                         link_header = response.headers.get("Link")

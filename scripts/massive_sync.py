@@ -12,9 +12,22 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("MassiveSync")
 
 async def run_massive_sync():
+    from src.database import database_url
+    
     print("=" * 60)
     print("🚀 HANA INTEL V2 - MOTOR DE IMPORTAÇÃO MASSIVA (BULLETPROOF)")
     print("=" * 60)
+    
+    # Mascarar URL do banco para segurança
+    db_info = "Localhost/Unknown"
+    if database_url:
+        if "@" in database_url:
+            db_info = database_url.split("@")[-1] # Pega o host:porta/db
+        else:
+            db_info = database_url
+            
+    print(f"📍 Destino: {db_info}")
+    print("-" * 60)
     print("Este módulo utiliza cursores para paginação segura e")
     print("controla automaticamente limites de requisição da API (HTTP 429).")
     print("=" * 60)
