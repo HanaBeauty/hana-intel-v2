@@ -1,4 +1,4 @@
-from langchain.tools import BaseTool
+from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
 from typing import Type, Any
 import logging

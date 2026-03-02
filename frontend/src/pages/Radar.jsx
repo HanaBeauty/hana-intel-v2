@@ -5,6 +5,7 @@ export default function Radar() {
   const [activeChats, setActiveChats] = useState([]);
   const [selectedChat, setSelectedChat] = useState(null);
   const [chatHistory, setChatHistory] = useState([]);
+  const [leadProfile, setLeadProfile] = useState(null);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef(null);
 
@@ -32,6 +33,19 @@ export default function Radar() {
     }
   };
 
+  const fetchProfile = async (chatId) => {
+    try {
+      setLeadProfile(null); // Reset during loading
+      const res = await fetch(`/api/v1/dashboard/crm/lead/${chatId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLeadProfile(data);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar perfil CRM:', err);
+    }
+  };
+
   useEffect(() => {
     fetchChats();
     const interval = setInterval(fetchChats, 5000); // Polling 5s
@@ -41,10 +55,12 @@ export default function Radar() {
   useEffect(() => {
     if (selectedChat) {
       fetchHistory(selectedChat.id);
+      fetchProfile(selectedChat.id);
       const interval = setInterval(() => fetchHistory(selectedChat.id), 3000); // Polling 3s
       return () => clearInterval(interval);
     } else {
       setChatHistory([]);
+      setLeadProfile(null);
     }
   }, [selectedChat]);
 
@@ -176,7 +192,11 @@ export default function Radar() {
             <div className="profile-header">
               <div className="profile-avatar-large"><User size={32} /></div>
               <h2>{selectedChat.name}</h2>
-              <span className="badge-tier silver">Nível Prata</span>
+              {leadProfile ? (
+                <span className={`badge-tier ${leadProfile.badge_class}`}>Nível {leadProfile.tier}</span>
+              ) : (
+                <span className="badge-tier silver">Carregando CRM...</span>
+              )}
             </div>
 
             <div className="profile-section">
@@ -199,11 +219,11 @@ export default function Radar() {
               <div className="crm-stats">
                 <div className="stat-box">
                   <span className="stat-label">LTV Total</span>
-                  <span className="stat-value">R$ 1.250</span>
+                  <span className="stat-value">{leadProfile ? leadProfile.total_spent_formatted : 'R$ --'}</span>
                 </div>
                 <div className="stat-box">
                   <span className="stat-label">Pedidos</span>
-                  <span className="stat-value">4</span>
+                  <span className="stat-value">{leadProfile ? leadProfile.orders_count : '-'}</span>
                 </div>
               </div>
             </div>
@@ -403,8 +423,12 @@ export default function Radar() {
           display: flex; align-items: center; justify-content: center;
         }
         .profile-header h2 { margin: 0; font-size: 1.2rem; }
-        .badge-tier { font-size: 0.75rem; padding: 4px 12px; border-radius: 12px; font-weight: 600; }
+        .badge-tier { font-size: 0.75rem; padding: 4px 12px; border-radius: 12px; font-weight: 600; transition: 0.3s; }
+        .badge-tier.bronze { background: rgba(205, 127, 50, 0.2); color: #eab308; border: 1px solid rgba(205, 127, 50, 0.4); } /* Adjust gold-ish bronze for dark mode */
         .badge-tier.silver { background: rgba(160, 174, 192, 0.2); color: #cbd5e1; border: 1px solid rgba(160,174,192,0.4); }
+        .badge-tier.gold { background: rgba(212, 175, 55, 0.2); color: #facc15; border: 1px solid rgba(212, 175, 55, 0.4); }
+        .badge-tier.gray { background: rgba(100, 100, 100, 0.2); color: #9ca3af; border: 1px solid rgba(100, 100, 100, 0.4); }
+        .badge-tier.red { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
 
         .profile-section h4 { font-size: 0.8rem; text-transform: uppercase; color: var(--color-text-secondary); margin-bottom: 12px; }
         
