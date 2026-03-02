@@ -36,50 +36,56 @@ class ShopifyHunterAPI:
         url = f"{self.base_url}/checkouts.json?created_at_min={created_at_min}&limit={limit}"
         
         async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url, headers=self._get_headers(), timeout=15.0)
-                response.raise_for_status()
-                data = response.json()
-                
-                checkouts = data.get("checkouts", [])
-                
-                # Telemetria de Auditoria
+            data = {"checkouts": []}
+            for attempt in range(3):
                 try:
-                    import redis
-                    import json
-                    r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
-                    log_entry = {"time": "Agora", "origin": "SHOPIFY_API", "action": "FETCH_CHECKOUTS", "dest": f"Encontrados: {len(checkouts)}"}
-                    r.lpush("dashboard_logs", json.dumps(log_entry))
-                    r.ltrim("dashboard_logs", 0, 19)
-                except:
-                    pass
-                opportunities = []
-                
-                for ck in checkouts:
-                    email = ck.get("email") or ck.get("customer", {}).get("email")
-                    phone = ck.get("phone") or ck.get("customer", {}).get("phone")
-                    
-                    if not email and not phone:
+                    response = await client.get(url, headers=self._get_headers(), timeout=15.0)
+                    if response.status_code == 429:
+                        retry_after = int(response.headers.get("Retry-After", 2))
+                        logger.warning(f"⚠️ Shopify Rate Limit (429). Aguardando {retry_after}s...")
+                        await asyncio.sleep(retry_after)
                         continue
-                        
-                    first_name = ck.get("customer", {}).get("first_name", "Cliente")
-                    total_price = ck.get("total_price", "0.00")
-                    items = [item.get("title") for item in ck.get("line_items", [])]
-                    
-                    opportunities.append({
-                        "type": "abandoned_cart",
-                        "customer_name": first_name,
-                        "email": email,
-                        "phone": phone,
-                        "total_price": total_price,
-                        "items": items,
-                        "raw_data": ck
-                    })
-                    
-                return opportunities
-            except Exception as e:
-                logger.error(f"Erro ao buscar checkouts abandonados: {str(e)}")
-                return []
+                    response.raise_for_status()
+                    data = response.json()
+                    break
+                except Exception as e:
+                    if attempt == 2:
+                        logger.error(f"Erro fatal ao buscar checkouts (3 tentativas): {str(e)}")
+                        return []
+                    await asyncio.sleep(1)
+            
+            checkouts = data.get("checkouts", [])
+            
+            # Telemetria de Auditoria
+            try:
+                import redis
+                import json
+                r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+                log_entry = {"time": "Agora", "origin": "SHOPIFY_API", "action": "FETCH_CHECKOUTS", "dest": f"Encontrados: {len(checkouts)}"}
+                r.lpush("dashboard_logs", json.dumps(log_entry))
+                r.ltrim("dashboard_logs", 0, 19)
+            except:
+                pass
+                
+            opportunities = []
+            for ck in checkouts:
+                email = ck.get("email") or ck.get("customer", {}).get("email")
+                phone = ck.get("phone") or ck.get("customer", {}).get("phone")
+                if not email and not phone:
+                    continue
+                first_name = ck.get("customer", {}).get("first_name", "Cliente")
+                total_price = ck.get("total_price", "0.00")
+                items = [item.get("title") for item in ck.get("line_items", [])]
+                opportunities.append({
+                    "type": "abandoned_cart",
+                    "customer_name": first_name,
+                    "email": email,
+                    "phone": phone,
+                    "total_price": total_price,
+                    "items": items,
+                    "raw_data": ck
+                })
+            return opportunities
 
     async def fetch_inactive_vip_customers(self, limit=10, days_inactive=7):
         """Busca clientes VIPs que não compram há algum tempo (últimos 7 dias)."""
@@ -89,58 +95,55 @@ class ShopifyHunterAPI:
         url = f"{self.base_url}/customers.json?limit=50"
         
         async with httpx.AsyncClient() as client:
-            try:
-                response = await client.get(url, headers=self._get_headers(), timeout=15.0)
-                response.raise_for_status()
-                data = response.json()
-                
-                customers = data.get("customers", [])
-                
-                # Telemetria de Auditoria
+            data = {"customers": []}
+            for attempt in range(3):
                 try:
-                    import redis
-                    import json
-                    r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
-                    log_entry = {"time": "Agora", "origin": "SHOPIFY_API", "action": "FETCH_VIP", "dest": f"Total na Base: {len(customers)}"}
-                    r.lpush("dashboard_logs", json.dumps(log_entry))
-                    r.ltrim("dashboard_logs", 0, 19)
-                except:
-                    pass
-                opportunities = []
-                
-                cutoff_date = datetime.utcnow() - timedelta(days=days_inactive)
-                
-                for cust in customers:
-                    # Filtro de VIP e inatividade
-                    orders_count = cust.get("orders_count", 0)
-                    total_spent = float(cust.get("total_spent", "0.0"))
-                    
-                    last_order_str = cust.get("last_order_name") 
-                    # Na API de customer, a data do ultimo pedido pode vir de outras formas.
-                    # Vamos simplificar simulando a checagem da data `updated_at` (quando o perfil teve atividade)
-                    updated_at_str = cust.get("updated_at")
-                    
-                    if not updated_at_str:
+                    response = await client.get(url, headers=self._get_headers(), timeout=15.0)
+                    if response.status_code == 429:
+                        retry_after = int(response.headers.get("Retry-After", 2))
+                        await asyncio.sleep(retry_after)
                         continue
-                        
-                    updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
-                    
-                    if total_spent > 100.0 and updated_at < cutoff_date:
-                        opportunities.append({
-                            "type": "inactive_vip",
-                            "customer_name": cust.get("first_name", "Cliente VIP"),
-                            "email": cust.get("email"),
-                            "phone": cust.get("phone"),
-                            "total_spent": total_spent,
-                            "days_inactive": (datetime.utcnow() - updated_at).days
-                        })
-                        
-                        if len(opportunities) >= limit:
-                            break
-                            
-                return opportunities
-            except Exception as e:
-                logger.error(f"Erro ao buscar clientes inativos: {str(e)}")
-                return []
+                    response.raise_for_status()
+                    data = response.json()
+                    break
+                except Exception as e:
+                    if attempt == 2:
+                        logger.error(f"Erro fatal ao buscar VIPs (3 tentativas): {str(e)}")
+                        return []
+                    await asyncio.sleep(1)
+            
+            customers = data.get("customers", [])
+            
+            # Telemetria de Auditoria
+            try:
+                import redis
+                import json
+                r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+                log_entry = {"time": "Agora", "origin": "SHOPIFY_API", "action": "FETCH_VIP", "dest": f"Total na Base: {len(customers)}"}
+                r.lpush("dashboard_logs", json.dumps(log_entry))
+                r.ltrim("dashboard_logs", 0, 19)
+            except:
+                pass
+                
+            opportunities = []
+            cutoff_date = datetime.utcnow() - timedelta(days=days_inactive)
+            for cust in customers:
+                total_spent = float(cust.get("total_spent", "0.0"))
+                updated_at_str = cust.get("updated_at")
+                if not updated_at_str:
+                    continue
+                updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
+                if total_spent > 100.0 and updated_at < cutoff_date:
+                    opportunities.append({
+                        "type": "inactive_vip",
+                        "customer_name": cust.get("first_name", "Cliente VIP"),
+                        "email": cust.get("email"),
+                        "phone": cust.get("phone"),
+                        "total_spent": total_spent,
+                        "days_inactive": (datetime.utcnow() - updated_at).days
+                    })
+                    if len(opportunities) >= limit:
+                        break
+            return opportunities
 
 shopify_hunter_api = ShopifyHunterAPI()

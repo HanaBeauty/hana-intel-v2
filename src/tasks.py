@@ -109,6 +109,15 @@ def process_evolution_webhook_task(self, payload: dict):
         redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
         r = redis.Redis.from_url(redis_url, decode_responses=True)
         
+        # 0.1. Idempotência por ID de Mensagem (Evita processar o mesmo webhook 2x se o servidor reenviar)
+        message_id = key.get("id")
+        if message_id:
+            msg_id_key = f"processed_msg:{message_id}"
+            if r.get(msg_id_key):
+                logger.info(f"♻️ [Idempotency] Mensagem {message_id} já processada. Ignorando.")
+                return {"status": "ignored", "reason": "already_processed"}
+            r.setex(msg_id_key, 600, "done") # Expira em 10 min
+        
         # Pega o JID completo (Remetente/Grupo/Canal)
         remote_jid = key.get("remoteJid", "Desconhecido")
         
@@ -160,7 +169,16 @@ def process_evolution_webhook_task(self, payload: dict):
         except Exception as e:
             logger.error(f"❌ Erro ao sincronizar Contato no PostgreSQL via Celery: {e}")
 
-        # 1. Lógica de Intervenção Humana (Handoff)
+        # 0.5. Lock de Concorrência (Evita disparos duplicados se o usuário mandar 5 msgs seguidas)
+        lock_key = f"ia_processing_lock:{number}"
+        if r.get(lock_key):
+            logger.warning(f"⏳ [Concurrency Lock] Já existe uma tarefa de IA em curso para {number}. Ignorando esta mensagem.")
+            return {"status": "ignored", "reason": "concurrent_processing"}
+        
+        # Define um lock curto (30s) para o processamento da IA
+        r.setex(lock_key, 30, "active")
+
+        # 0. Registrar / Atualizar Lead no CRM Permanente (Tabela Contact)
         handoff_key = f"human_handoff:{number}"
         if key.get("fromMe") is True:
             comando = texto_msg.strip().lower()
@@ -251,7 +269,10 @@ def process_evolution_webhook_task(self, payload: dict):
                 
         except Exception as e:
             logger.error(f"❌ [WhatsApp Critical] Falha ao disparar resposta: {e}")
+            r.delete(lock_key) # Garante que o lock morra no erro
         
+        # Ao finalizar (sucesso ou erro), removemos o lock para permitir a próxima interação
+        r.delete(lock_key)
         return {"status": "success", "event": event_type, "remote_jid": remote_jid}
         
     else:
