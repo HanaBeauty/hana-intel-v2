@@ -125,7 +125,7 @@ class ShopifyHunterAPI:
                         
                     updated_at = datetime.fromisoformat(updated_at_str.replace("Z", "+00:00")).replace(tzinfo=None)
                     
-                    if total_spent > 500.0 and updated_at < cutoff_date:
+                    if total_spent > 100.0 and updated_at < cutoff_date:
                         opportunities.append({
                             "type": "inactive_vip",
                             "customer_name": cust.get("first_name", "Cliente VIP"),

@@ -24,12 +24,32 @@ def process_strategic_intent(self, user_intent: str, content_type: str = "conte�
         if sync_session_maker:
             with sync_session_maker() as session:
                 # Parsing básico das variantes A/B/C geradas pelo CrewAI
+                # Parsing robusto com Regex para Variantes A/B/C
+                import re
                 variations_dict = {}
-                parts = str(resultado_crew).split("--- VARIANTE")
-                for part in parts:
-                    if "A ---" in part: variations_dict["A"] = part.split("---", 1)[1].strip()
-                    if "B ---" in part: variations_dict["B"] = part.split("---", 1)[1].strip()
-                    if "C ---" in part: variations_dict["C"] = part.split("---", 1)[1].strip()
+                
+                # Procura padrões como "VARIANTE A", "Variante A", "--- VARIANTE A ---", "A ---"
+                patterns = {
+                    "A": [r"(?i)---?\s*VARIANTE\s*A\s*---?", r"(?i)VARIANTE\s*A\s*:"],
+                    "B": [r"(?i)---?\s*VARIANTE\s*B\s*---?", r"(?i)VARIANTE\s*B\s*:"],
+                    "C": [r"(?i)---?\s*VARIANTE\s*C\s*---?", r"(?i)VARIANTE\s*C\s*:"]
+                }
+                
+                text_content = str(resultado_crew)
+                
+                # Split simplificado por variantes principais
+                split_pattern = r"(?i)---?\s*VARIANTE\s*[ABC]\s*---?"
+                content_parts = re.split(split_pattern, text_content)
+                
+                # Se o split funcionou e temos partes
+                if len(content_parts) > 1:
+                    # O primeiro item costuma ser introdução, pegamos os subsequentes
+                    for i, char in enumerate(["A", "B", "C"]):
+                        if i + 1 < len(content_parts):
+                            variations_dict[char] = content_parts[i+1].strip()
+                else:
+                    # Fallback caso a IA não use separadores "---"
+                    variations_dict["A"] = text_content
 
                 import json
                 nova_campanha = Campaign(

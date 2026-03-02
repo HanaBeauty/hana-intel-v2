@@ -8,6 +8,15 @@ import random
 
 logger = logging.getLogger(__name__)
 
+# Definição das Linhas Editoriais para o Nurture Hub
+linhas_editoriais = [
+    ("Técnicas de Retenção", "Dê uma dica sobre como a umidade do ambiente afeta a polimerização do adesivo."),
+    ("Cuidados Pós-Procedimento", "Explique a importância de não molhar as extensões nas primeiras 24h."),
+    ("Diferencial Hana Beauty", "Fale sobre a tecnologia japonesa por trás dos nossos adesivos ETIL."),
+    ("Venda Consultiva", "Como explicar para a cliente que o 'barato sai caro' na saúde dos olhos."),
+    ("Mentalidade Ouro", "Uma frase motivacional para Lash Designers que buscam faturar mais de 20k/mês.")
+]
+
 async def run_nurture_logic():
     """Lógica assíncrona do Motor Autônomo de Nutrição"""
     logger.info("Iniciando Motor de Nutrição (Nurture Hub) Hana Intel...")
