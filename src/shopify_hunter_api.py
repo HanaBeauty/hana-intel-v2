@@ -42,6 +42,17 @@ class ShopifyHunterAPI:
                 data = response.json()
                 
                 checkouts = data.get("checkouts", [])
+                
+                # Telemetria de Auditoria
+                try:
+                    import redis
+                    import json
+                    r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+                    log_entry = {"time": "Agora", "origin": "SHOPIFY_API", "action": "FETCH_CHECKOUTS", "dest": f"Encontrados: {len(checkouts)}"}
+                    r.lpush("dashboard_logs", json.dumps(log_entry))
+                    r.ltrim("dashboard_logs", 0, 19)
+                except:
+                    pass
                 opportunities = []
                 
                 for ck in checkouts:
@@ -84,6 +95,17 @@ class ShopifyHunterAPI:
                 data = response.json()
                 
                 customers = data.get("customers", [])
+                
+                # Telemetria de Auditoria
+                try:
+                    import redis
+                    import json
+                    r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+                    log_entry = {"time": "Agora", "origin": "SHOPIFY_API", "action": "FETCH_VIP", "dest": f"Total na Base: {len(customers)}"}
+                    r.lpush("dashboard_logs", json.dumps(log_entry))
+                    r.ltrim("dashboard_logs", 0, 19)
+                except:
+                    pass
                 opportunities = []
                 
                 cutoff_date = datetime.utcnow() - timedelta(days=days_inactive)
