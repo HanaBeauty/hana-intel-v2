@@ -61,8 +61,18 @@ async def run_nurture_logic():
             
             db.add(nova_nutricao)
             await db.commit()
-            
             logger.info(f"✅ Nurture Hub: Conteúdo ({canal_sorteado}) gerado e enviado ao deck de aprovação!")
+            
+            # Telemetria de Sucesso
+            try:
+                import redis
+                import json
+                r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+                log_entry = {"time": "Agora", "origin": "NURTURE_AI", "action": "GENERATION_SUCCESS", "dest": f"Novo conteúdo: {tema_sorteado}"}
+                r.lpush("dashboard_logs", json.dumps(log_entry))
+                r.ltrim("dashboard_logs", 0, 19)
+            except:
+                pass
             
         except Exception as e:
             error_msg = f"Erro Nurture AI: {str(e)[:100]}"

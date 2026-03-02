@@ -123,6 +123,17 @@ body { font-family: 'Inter', Arial, sans-serif; background-color: #FAFAFA; margi
             db.add_all(novas_campanhas)
             await db.commit()
             logger.info(f"✅ Caçador de Oportunidades: {len(novas_campanhas)} Rascunhos gerados por IA enviados ao Review Board.")
+            
+            # Telemetria de Sucesso
+            try:
+                import redis
+                import json
+                r = redis.Redis.from_url(os.getenv("REDIS_URL", "redis://localhost:6379/0"), decode_responses=True)
+                log_entry = {"time": "Agora", "origin": "HUNTER_AI", "action": "GENERATION_SUCCESS", "dest": f"{len(novas_campanhas)} Rascunhos criados"}
+                r.lpush("dashboard_logs", json.dumps(log_entry))
+                r.ltrim("dashboard_logs", 0, 19)
+            except:
+                pass
 
 @celery_app.task(name="tasks.opportunity_hunter")
 def opportunity_hunter_task():

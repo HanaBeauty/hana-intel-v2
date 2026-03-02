@@ -14,23 +14,29 @@ router = APIRouter(prefix="/api/v1/dashboard", tags=["Dashboard V2"])
 @router.get("/campaigns/pending")
 async def get_pending_campaigns(db: AsyncSession = Depends(get_db_session)):
     """Retorna todas as campanhas geradas pela IA que aguardam aprovação humana."""
-    query = select(Campaign).where(Campaign.status == CampaignStatus.draft).order_by(Campaign.created_at.desc())
-    result = await db.execute(query)
-    campaigns = result.scalars().all()
-    
-    return [
-        {
-            "id": c.id,
-            "title": c.title,
-            "intent": c.intent,
-            "channel": c.channel,
-            "audience": c.target_audience,
-            "content": c.generated_content,
-            "status": c.status.value,
-            "created_at": c.created_at
-        }
-        for c in campaigns
-    ]
+    try:
+        query = select(Campaign).where(Campaign.status == CampaignStatus.draft).order_by(Campaign.created_at.desc())
+        result = await db.execute(query)
+        campaigns = result.scalars().all()
+        
+        return [
+            {
+                "id": c.id,
+                "title": c.title,
+                "intent": c.intent,
+                "channel": c.channel,
+                "audience": c.target_audience,
+                "content": c.generated_content,
+                "variations": c.variations, # Campo essencial para o frontend separar A/B/C
+                "status": c.status.value if hasattr(c.status, 'value') else str(c.status),
+                "created_at": c.created_at.isoformat() if c.created_at else None
+            }
+            for c in campaigns
+        ]
+    except Exception as e:
+        import traceback
+        logger.error(f"Erro em get_pending_campaigns: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Erro interno ao carregar campanhas: {str(e)}")
 
 from src.workers.campaign_tasks import publish_campaign_task
 
