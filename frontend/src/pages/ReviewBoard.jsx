@@ -183,7 +183,12 @@ export default function ReviewBoard() {
 
             <div className={`draft-content ${draft.channel === 'email' ? 'email-preview' : ''}`}>
               {draft.channel === 'email' ? (
-                <div dangerouslySetInnerHTML={{ __html: draft.content }} />
+                <iframe
+                  title={`email-preview-${draft.id}`}
+                  srcDoc={draft.content}
+                  className="email-iframe"
+                  sandbox="allow-same-origin"
+                />
               ) : (
                 draft.content
               )}
@@ -372,11 +377,12 @@ export default function ReviewBoard() {
           background: rgba(239, 68, 68, 0.1);
         }
 
-        .email-preview {
-          background: transparent;
-          padding: 0;
-          border-radius: 0;
-          font-family: inherit;
+        .email-iframe {
+          width: 100%;
+          height: 600px;
+          border: none;
+          background: #FAFAFA;
+          border-radius: 8px;
         }
 
         .empty-state {
