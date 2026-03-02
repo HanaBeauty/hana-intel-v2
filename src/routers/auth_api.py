@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 import bcrypt
@@ -55,8 +55,41 @@ def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] 
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+def send_whatsapp_2fa(number: str, code: str):
+    import requests
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    evo_url = os.getenv("EVOLUTION_API_URL", "https://webhook.adsai.com.br")
+    evo_token = os.getenv("EVOLUTION_API_TOKEN", "")
+    # Em caso de não existir ENV, usa a instância oficial detectada nas auditorias anteriores
+    instance_name = os.getenv("EVOLUTION_API_INSTANCE", "Hana_Intel_PRO")
+    
+    if not evo_token:
+        logger.warning(f"⚠️ EVOLUTION_API_TOKEN vazio. Simulação DevMode 2FA ativada para {number}. Código: {code}")
+        return
+        
+    send_url = f"{evo_url.rstrip('/')}/message/sendText/{instance_name}"
+    headers = {
+        "apikey": evo_token,
+        "Content-Type": "application/json"
+    }
+    body = {
+        "number": number,
+        "text": f"🛡️ *Hana Intel Enterprise*\nSeu código de acesso à Torre de Controle: *{code}*\n\n_Válido por 5 minutos._"
+    }
+    try:
+        logger.info(f"📤 Tentando disparar 2FA WhatsApp para {number}...")
+        resp = requests.post(send_url, json=body, headers=headers, timeout=10)
+        if resp.status_code in (200, 201):
+            logger.info("✅ 2FA entregue no WhatsApp do CEO.")
+        else:
+            logger.error(f"❌ Erro WhatsApp 2FA API: {resp.status_code} - {resp.text}")
+    except Exception as e:
+        logger.error(f"❌ Falha de Rede no 2FA WhatsApp: {e}")
+
 @router.post("/login")
-async def login(req: LoginRequest, db: AsyncSession = Depends(get_db_session)):
+async def login(req: LoginRequest, background_tasks: BackgroundTasks, db: AsyncSession = Depends(get_db_session)):
     """
     Step 1 do Login.
     Valida as credenciais. Se corretas, dispara um código 2FA via WhatsApp e retorna status 'requires_2fa'.
@@ -70,21 +103,21 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db_session)):
     if not verify_password(req.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Credenciais incorretas.")
 
-    # Se a senha passar, vamos gerar um Mock ou enviar via Celery Evolution API o 2FA.
+    # Se a senha passar, gera o código temporal numérico de 6 dígitos
     import random
     code_2fa = f"{random.randint(100000, 999999)}"
     
-    # IMPORTANTE: Em produção, salvaríamos esse código no Redis com TTL de 5 minutos.
-    # Para o escopo deste backend agnóstico, podemos abstrair salvando num cache Redis.
-    # Como não importamos o redis pool diretamente aqui, vamos printar no terminal 
-    # pro desenvolvedor (como seed inicial) ou enviar pro WhatsApp se tiver número.
+    # Importante: num ambiente full prod sem mock, salvaríamos num Redis com TTL de 5 mins.
+    # Neste cenário inicial, o Dev_Code retorna pelo body pro console do browser por precaução caso WhatsApp falhe.
     
-    # FIXME: O código abaixo simularia o disparo. 
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"🔑 [2FA GERADO] Código para {user.email} (Tel: {user.phone}): {code_2fa}")
+    if user.phone:
+        # Programa o disparo real por WhatsApp sem travar a resposta HTTP
+        background_tasks.add_task(send_whatsapp_2fa, user.phone, code_2fa)
+    else:
+        import logging
+        logging.getLogger(__name__).warning(f"⚠️ Conta {user.email} não possui telefone para 2FA.")
     
-    # Retornamos sucesso exigindo a etapa 2. (Passaremos o codigo em texto por conveniência de dev, remover em prod)
+    # Retornamos sucesso exigindo a etapa 2.
     return {
         "status": "requires_2fa",
         "message": f"Um código de 6 dígitos foi enviado para o WhatsApp com final {user.phone[-4:] if user.phone else 'não cadastrado'}.",
