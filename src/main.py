@@ -28,9 +28,10 @@ app.add_middleware(
 )
 
 # Registrando módulos independentes (Routers)
-from src.routers import dashboard_api
+from src.routers import dashboard_api, auth_api
 app.include_router(webhooks.router)
 app.include_router(dashboard_api.router)
+app.include_router(auth_api.router)
 
 @app.get("/health", tags=["Health"])
 async def health_check() -> Dict[str, Any]:

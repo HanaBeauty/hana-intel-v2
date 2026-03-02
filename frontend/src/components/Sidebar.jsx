@@ -1,15 +1,24 @@
 import { NavLink } from 'react-router-dom';
-import { Activity, MailCheck, Settings, Home, BrainCircuit } from 'lucide-react';
+import { Activity, MailCheck, Settings, Home, BrainCircuit, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Sidebar() {
-  const routes = [
-    { path: '/control-tower', label: 'Torre de Controle', icon: <Activity size={20} /> },
-    { path: '/radar', label: 'Radar 360', icon: <Activity size={20} /> },
-    { path: '/review-board', label: 'Aprovador (CRM)', icon: <MailCheck size={20} /> },
-    { path: '/nurture-hub', label: 'Nurture Hub', icon: <BrainCircuit size={20} /> },
-    { path: '/strategy-room', label: 'Strategy Room', icon: <Home size={20} /> },
-    { path: '/settings', label: 'Configurações', icon: <Settings size={20} /> }
+  const { user, logout } = useAuth();
+
+  const allRoutes = [
+    { path: '/dashboard/control-tower', label: 'Torre de Controle', icon: <Activity size={20} />, requiresAdmin: true },
+    { path: '/dashboard/radar', label: 'Radar 360', icon: <Activity size={20} />, requiresAdmin: false },
+    { path: '/dashboard/review-board', label: 'Aprovador (CRM)', icon: <MailCheck size={20} />, requiresAdmin: true },
+    { path: '/dashboard/nurture-hub', label: 'Nurture Hub', icon: <BrainCircuit size={20} />, requiresAdmin: true },
+    { path: '/dashboard/strategy-room', label: 'Strategy Room', icon: <Home size={20} />, requiresAdmin: true },
+    { path: '/dashboard/settings', label: 'Configurações', icon: <Settings size={20} />, requiresAdmin: true }
   ];
+
+  // Filtra as rotas se for ATENDENTE (Remove tudo que exige admin)
+  const routes = allRoutes.filter(route => {
+    if (route.requiresAdmin && user?.role !== 'ADMIN') return false;
+    return true;
+  });
 
   return (
     <aside className="sidebar">
@@ -32,10 +41,15 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         <div className="user-profile">
-          <div className="avatar">JT</div>
+          <div className="avatar">{user?.name ? user.name.substring(0, 2).toUpperCase() : 'UI'}</div>
           <div className="user-info">
-            <p className="user-name">Juliano Takimoto</p>
-            <p className="user-role">CEO / Master Admin</p>
+            <p className="user-name">{user?.name || 'Carregando...'}</p>
+            <p className="user-role">{user?.role === 'ADMIN' ? 'CEO / Master Admin' : 'Atendente Elite'}</p>
+          </div>
+          <div className="logout-button ml-auto mr-[-5px]">
+            <button onClick={logout} className="text-[#a49174] hover:text-[#d5aa53] transition-colors p-2" title="Desconectar">
+              <LogOut size={18} />
+            </button>
           </div>
         </div>
       </div>

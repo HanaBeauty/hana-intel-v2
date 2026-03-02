@@ -18,6 +18,26 @@ class ProductKnowledge(Base):
 from sqlalchemy import DateTime, Enum
 import enum
 import datetime
+import uuid
+from sqlalchemy.dialects.postgresql import UUID
+
+class UserRole(str, enum.Enum):
+    ADMIN = "ADMIN"
+    ATTENDANT = "ATTENDANT"
+
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
+    name = Column(String, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    phone = Column(String, nullable=True) # WhatsApp
+    role = Column(Enum(UserRole), default=UserRole.ATTENDANT)
+    is_active = Column(Integer, default=1) # 1 = Active, 0 = Inactive
+    
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
 
 class CampaignStatus(str, enum.Enum):
     draft = "draft"
