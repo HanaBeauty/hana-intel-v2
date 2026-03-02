@@ -32,7 +32,11 @@ async def seed_admin():
         admin = result.scalars().first()
         
         if admin:
-            print(f"⚠️ Administrador {admin.email} já existente no banco de dados. Cancelando seed.")
+            print(f"⚠️ Administrador {admin.email} já existente. Forçando atualização da senha e do Hash (Bcrypt puro)...")
+            raw_password = "admin" # Senha de reset limpa
+            admin.hashed_password = get_password_hash(raw_password)
+            await session.commit()
+            print(f"✅ Senha do administrador {admin.email} redefinida com sucesso para o novo padrão de criptografia!")
         else:
             # Cria o admin padrão
             raw_password = "admin" # Em produção será gerada ou resetada no painel
