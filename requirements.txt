@@ -19,6 +19,5 @@ langchain-google-genai==1.0.8
 requests==2.31.0
 greenlet==3.0.3
 PyJWT==2.11.0
-passlib==1.7.4
-bcrypt==3.2.2
+bcrypt==5.0.0
 email-validator==2.3.0

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
-from passlib.context import CryptContext
+import bcrypt
 import jwt
 import datetime
 import os
@@ -14,7 +14,8 @@ from src.database import get_db_session
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Auth & IAM"])
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Substituição do Passlib antigo pelo Bcrypt puro para suportar V5
+# pwd_context = CryptContext(...) removido
 SECRET_KEY = os.getenv("JWT_SECRET", "hana_intel_fallback_secret_key_change_me_in_prod")
 ALGORITHM = "HS256"
 
@@ -31,10 +32,18 @@ class Verify2FARequest(BaseModel):
     code: str
 
 def verify_password(plain_password, hashed_password):
-    return pwd_context.verify(plain_password, hashed_password)
+    if isinstance(plain_password, str):
+        plain_password = plain_password.encode('utf-8')
+    if isinstance(hashed_password, str):
+        hashed_password = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(plain_password, hashed_password)
 
 def get_password_hash(password):
-    return pwd_context.hash(password)
+    if isinstance(password, str):
+        password = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password, salt)
+    return hashed.decode('utf-8')
 
 def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] = None):
     to_encode = data.copy()
