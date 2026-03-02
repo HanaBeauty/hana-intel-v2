@@ -56,7 +56,18 @@ async def run_nurture_logic():
             logger.info(f"✅ Nurture Hub: Conteúdo ({canal_sorteado}) gerado e enviado ao deck de aprovação!")
             
         except Exception as e:
-            logger.error(f"Erro ao gerar conteúdo de Nurture: {e}")
+            error_msg = f"Erro Nurture AI: {str(e)[:100]}"
+            logger.error(error_msg)
+            try:
+                import redis
+                import json
+                redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+                r = redis.Redis.from_url(redis_url, decode_responses=True)
+                log_entry = {"time": "Agora", "origin": "NURTURE_AI", "action": "GENERATION_ERROR", "dest": error_msg}
+                r.lpush("dashboard_logs", json.dumps(log_entry))
+                r.ltrim("dashboard_logs", 0, 19)
+            except:
+                pass
 
 @celery_app.task(name="tasks.nurture_hub_generator")
 def nurture_hub_task():

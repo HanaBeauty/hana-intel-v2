@@ -100,7 +100,18 @@ body { font-family: 'Inter', Arial, sans-serif; background-color: #FAFAFA; margi
                     novas_campanhas.append(campanha)
                     
             except Exception as e:
-                logger.error(f"Erro ao processar oportunidade para {op.get('customer_name')}: {e}")
+                error_msg = f"Erro Hunter AI: {str(e)[:100]}"
+                logger.error(error_msg)
+                try:
+                    import redis
+                    import json
+                    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+                    r = redis.Redis.from_url(redis_url, decode_responses=True)
+                    log_entry = {"time": "Agora", "origin": "HUNTER_AI", "action": "GENERATION_ERROR", "dest": error_msg}
+                    r.lpush("dashboard_logs", json.dumps(log_entry))
+                    r.ltrim("dashboard_logs", 0, 19)
+                except:
+                    pass
                 
         if novas_campanhas:
             db.add_all(novas_campanhas)
